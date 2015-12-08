@@ -1,4 +1,4 @@
---- /home/ec2-user/TEST/pgbouncer/include/bouncer.h	2015-12-08 15:00:57.406178917 -0500
+--- /home/ec2-user/TEST/pgbouncer/include/bouncer.h	2015-12-08 17:31:44.635667172 -0500
 +++ ./include/bouncer.h	2015-12-08 14:57:27.525236201 -0500
 @@ -88,12 +88,17 @@ typedef struct PgStats PgStats;
  typedef union PgAddr PgAddr;

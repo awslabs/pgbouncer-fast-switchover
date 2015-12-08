@@ -1,4 +1,4 @@
---- /home/ec2-user/TEST/pgbouncer/src/client.c	2015-12-08 15:00:57.408178964 -0500
+--- /home/ec2-user/TEST/pgbouncer/src/client.c	2015-12-08 17:31:44.636667196 -0500
 +++ ./src/client.c	2015-12-08 14:57:27.526236225 -0500
 @@ -632,12 +632,20 @@ static bool handle_client_work(PgSocket
  		client->query_start = get_cached_time();

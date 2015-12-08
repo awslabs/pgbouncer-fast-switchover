@@ -1,5 +1,5 @@
---- /home/ec2-user/TEST/pgbouncer/src/main.c	2015-12-08 15:00:57.409178988 -0500
-+++ ./src/main.c	2015-12-08 14:57:27.527236248 -0500
+--- /home/ec2-user/TEST/pgbouncer/src/main.c	2015-12-08 17:31:44.637667220 -0500
++++ ./src/main.c	2015-12-08 17:56:00.589177003 -0500
 @@ -138,12 +138,17 @@ int cf_stats_period;
  
  int cf_log_connections;
@@ -18,21 +18,6 @@
  char *cf_client_tls_cert_file;
  char *cf_client_tls_key_file;
  char *cf_client_tls_ciphers;
-@@ -247,13 +252,13 @@ CF_ABS("ignore_startup_parameters", CF_S
- CF_ABS("disable_pqexec", CF_INT, cf_disable_pqexec, CF_NO_RELOAD, "0"),
- CF_ABS("dns_max_ttl", CF_TIME_USEC, cf_dns_max_ttl, 0, "15"),
- CF_ABS("dns_nxdomain_ttl", CF_TIME_USEC, cf_dns_nxdomain_ttl, 0, "15"),
- CF_ABS("dns_zone_check_period", CF_TIME_USEC, cf_dns_zone_check_period, 0, "0"),
- 
- CF_ABS("max_packet_size", CF_UINT, cf_max_packet_size, 0, "2147483647"),
--CF_ABS("pkt_buf", CF_INT, cf_sbuf_len, CF_NO_RELOAD, "4096"),
-+CF_ABS("pkt_buf", CF_INT, cf_sbuf_len, CF_NO_RELOAD, "2048"),
- CF_ABS("sbuf_loopcnt", CF_INT, cf_sbuf_loopcnt, 0, "5"),
- CF_ABS("tcp_defer_accept", DEFER_OPS, cf_tcp_defer_accept, 0, NULL),
- CF_ABS("tcp_socket_buffer", CF_INT, cf_tcp_socket_buffer, 0, "0"),
- CF_ABS("tcp_keepalive", CF_INT, cf_tcp_keepalive, 0, "1"),
- CF_ABS("tcp_keepcnt", CF_INT, cf_tcp_keepcnt, 0, "0"),
- CF_ABS("tcp_keepidle", CF_INT, cf_tcp_keepidle, 0, "0"),
 @@ -264,12 +269,17 @@ CF_ABS("stats_users", CF_STR, cf_stats_u
  CF_ABS("stats_period", CF_INT, cf_stats_period, 0, "60"),
  CF_ABS("log_connections", CF_INT, cf_log_connections, 0, "1"),

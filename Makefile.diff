@@ -1,5 +1,5 @@
---- /home/ec2-user/TEST/pgbouncer/Makefile	2015-12-08 15:00:57.405178894 -0500
-+++ ./Makefile	2015-12-08 14:57:27.526236225 -0500
+--- /home/ec2-user/TEST/pgbouncer/Makefile	2015-12-08 17:31:44.633667125 -0500
++++ ./Makefile	2015-12-08 17:59:38.286331014 -0500
 @@ -18,12 +18,15 @@ pgbouncer_SOURCES = \
  	src/sbuf.c \
  	src/server.c \
@@ -16,7 +16,7 @@
  	include/client.h \
  	include/dnslookup.h \
  	include/hba.h \
-@@ -37,27 +40,31 @@ pgbouncer_SOURCES = \
+@@ -37,22 +40,26 @@ pgbouncer_SOURCES = \
  	include/sbuf.h \
  	include/server.h \
  	include/stats.h \
@@ -43,14 +43,8 @@
  DISTCLEANFILES = config.mak config.status lib/usual/config.h config.log
  
  DIST_SUBDIRS = doc test
--dist_man_MANS = doc/pgbouncer.1 doc/pgbouncer.5
-+#dist_man_MANS = doc/pgbouncer.1 doc/pgbouncer.5
+ dist_man_MANS = doc/pgbouncer.1 doc/pgbouncer.5
  
- # files in tgz
- EXTRA_DIST = AUTHORS COPYRIGHT Makefile config.mak.in config.sub config.guess \
- 	     install-sh autogen.sh configure configure.ac \
- 	     debian/compat debian/changelog debian/control debian/rules debian/copyright \
- 	     etc/mkauth.py etc/example.debian.init.sh \
 @@ -81,13 +88,14 @@ CPPFLAGS += -DDBGVER="\"compiled by <$${
  endif
  
@@ -67,32 +61,3 @@
  EXTRA_pgbouncer_SOURCES = win32/win32support.c win32/win32support.h
  EXTRA_PROGRAMS = pgbevent
  ifeq ($(PORTNAME),win32)
-@@ -127,17 +135,15 @@ w32arch = i686-w64-mingw32
- w32zip = pgbouncer-$(PACKAGE_VERSION)-win32.zip
- zip: configure clean
- 	rm -rf buildexe
- 	mkdir buildexe
- 	cd buildexe \
- 		&& ../configure --host=$(w32arch) --disable-debug \
--			--without-openssl \
--			--without-cares \
- 			--with-libevent=/opt/apps/win32 --enable-evdns \
- 		&& make \
--		&& $(w32arch)-strip pgbouncer.exe pgbevent.dll \
-+		&& $(warch)-strip pgbouncer.exe pgbevent.dll \
- 		&& zip pgbouncer.zip pgbouncer.exe pgbevent.dll doc/*.html
- 	zip -l buildexe/pgbouncer.zip etc/pgbouncer.ini etc/userlist.txt
- 	mv buildexe/pgbouncer.zip $(w32zip)
- 
- zip-up: $(w32zip)
- 	rsync $(w32zip) pgf:web/pgbouncer/htdocs/win32/
-@@ -152,9 +158,6 @@ tags:
- 
- htmls:
- 	for f in *.rst doc/*.rst; do \
- 		mkdir -p html && rst2html $$f > html/`basename $$f`.html; \
- 	done
- 
--doc/pgbouncer.1 doc/pgbouncer.5:
--	$(MAKE) -C doc
--
