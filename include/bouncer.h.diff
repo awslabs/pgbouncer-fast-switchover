@@ -1,0 +1,38 @@
+--- /home/ec2-user/TEST/pgbouncer/include/bouncer.h	2015-12-08 15:00:57.406178917 -0500
++++ ./include/bouncer.h	2015-12-08 14:57:27.525236201 -0500
+@@ -88,12 +88,17 @@ typedef struct PgStats PgStats;
+ typedef union PgAddr PgAddr;
+ typedef enum SocketState SocketState;
+ typedef struct PktHdr PktHdr;
+ 
+ extern int cf_sbuf_len;
+ 
++/* pgbouncer-rr extensions */
++#include "pycall.h"
++#include "route_connection.h"
++#include "rewrite_query.h"
++
+ #include "util.h"
+ #include "iobuf.h"
+ #include "sbuf.h"
+ #include "pktbuf.h"
+ #include "varcache.h"
+ #include "dnslookup.h"
+@@ -457,12 +462,17 @@ extern int cf_tcp_defer_accept;
+ 
+ extern int cf_log_connections;
+ extern int cf_log_disconnections;
+ extern int cf_log_pooler_errors;
+ extern int cf_application_name_add_host;
+ 
++/* pgbouncer-rr extensions */
++extern char *cf_routing_rules_py_module_file;
++extern char *cf_rewrite_query_py_module_file;
++extern char *cf_rewrite_query_disconnect_on_failure;
++
+ extern int cf_client_tls_sslmode;
+ extern char *cf_client_tls_protocols;
+ extern char *cf_client_tls_ca_file;
+ extern char *cf_client_tls_cert_file;
+ extern char *cf_client_tls_key_file;
+ extern char *cf_client_tls_ciphers;

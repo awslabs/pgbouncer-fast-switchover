@@ -1,0 +1,23 @@
+--- /home/ec2-user/TEST/pgbouncer/src/client.c	2015-12-08 15:00:57.408178964 -0500
++++ ./src/client.c	2015-12-08 14:57:27.526236225 -0500
+@@ -632,12 +632,20 @@ static bool handle_client_work(PgSocket
+ 		client->query_start = get_cached_time();
+ 	}
+ 
+ 	if (client->pool->db->admin)
+ 		return admin_handle_client(client, pkt);
+ 
++        /* pgbouncer-rr extensions: query rewrite & client connection routing */
++        if (pkt->type == 'Q' || pkt->type == 'P') {
++                if (!rewrite_query(client, pkt)) {
++                        return false;
++                }
++                route_client_connection(client, pkt);
++        }
++
+ 	/* acquire server */
+ 	if (!find_server(client))
+ 		return false;
+ 
+ 	/* postpone rfq change until certain that client will not be paused */
+ 	if (rfq_delta) {
