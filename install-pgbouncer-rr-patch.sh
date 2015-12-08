@@ -12,9 +12,8 @@
 # This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. 
 # See the License for the specific language governing permissions and limitations under the License.
 #
-# pgbouncer-rr 
-# Create script to patch pgbouncer distribution with pgbouncer-rr
-# enhancements
+# pgbouncer-rr-patch: 
+# Script to patch pgbouncer distribution with pgbouncer-rr enhancements
 #
 
 USAGE="Usage: $0 <pgbouncer dir>"
