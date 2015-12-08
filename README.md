@@ -2,7 +2,7 @@
 
 Have you ever wanted to split your database load across multiple servers or clusters without impacting the configuration or code of your client applications? Or perhaps you have wished for a way to intercept and modify application queries, so that you can make them use optimized tables (sorted, pre-joined, pre-aggregated, etc.), add security filters, or hide changes you have made in the schema?  
 
-The [pgbouncer-rr](https://github.com/rstrahan/pgbouncer-rr-patch) project is based on [pgbouncer](https://pgbouncer.github.io/usage.html#description), an open source PostgreSQL connection pooler. It adds two new significant features:    
+The [pgbouncer-rr](https://github.com/awslabs/pgbouncer-rr-patch) project is based on [pgbouncer](https://pgbouncer.github.io/usage.html#description), an open source PostgreSQL connection pooler. It adds two new significant features:    
 1. **Routing:** intelligently send queries to different database servers from one client connection; use it to partition or load balance across multiple servers/clusters.  
 2. **Rewrite:** intercept and programmatically change client queries before they are sent to the server: use it to optimize or otherwise alter queries without modifying your application.   
 
@@ -195,7 +195,7 @@ sudo yum install libevent-devel openssl-devel git libtool python-devel -y
 git clone https://github.com/pgbouncer/pgbouncer.git
 
 # download pgbouncer-rr extensions
-git clone https://github.com/rstrahan/pgbouncer-rr-patch.git
+git clone https://github.com/awslabs/pgbouncer-rr-patch.git
 
 # merge pgbouncer-rr extensions into pgbouncer code
 cd pgbouncer-rr-patch
