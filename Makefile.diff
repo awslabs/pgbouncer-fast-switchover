@@ -1,5 +1,5 @@
---- /home/ec2-user/TEST/pgbouncer/Makefile	2015-12-08 17:31:44.633667125 -0500
-+++ ./Makefile	2015-12-08 17:59:38.286331014 -0500
+--- /home/ec2-user/TEST/pgbouncer/Makefile	2015-12-29 17:32:40.174622100 -0500
++++ ./Makefile	2015-12-29 17:30:59.946064408 -0500
 @@ -18,12 +18,15 @@ pgbouncer_SOURCES = \
  	src/sbuf.c \
  	src/server.c \
@@ -29,7 +29,7 @@
  	include/varcache.h
  
 -pgbouncer_CPPFLAGS = -Iinclude $(CARES_CFLAGS) $(TLS_CPPFLAGS)
-+python_CPPFLAGS = -I/usr/include/python2.7 -I/usr/include/python2.7 -fno-strict-aliasing -O2 -g -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector-strong --param=ssp-buffer-size=4 -grecord-gcc-switches -m64 -mtune=generic -D_GNU_SOURCE -fPIC -fwrapv -DNDEBUG -O2 -g -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector-strong --param=ssp-buffer-size=4 -grecord-gcc-switches -m64 -mtune=generic -D_GNU_SOURCE -fPIC -fwrapv
++python_CPPFLAGS = -I/usr/include/python2.7 -I/usr/include/python2.7 
 +pgbouncer_CPPFLAGS = -Iinclude $(CARES_CFLAGS) $(TLS_CPPFLAGS) $(python_CPPFLAGS)
  
  # include libusual sources directly
