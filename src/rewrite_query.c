@@ -34,7 +34,7 @@ bool is_rewritten(char *query);
 bool rewrite_query(PgSocket *client, PktHdr *pkt) {
 	SBuf *sbuf = &client->sbuf;
 	char *pkt_start;
-	char *stmt_str, *query_str, *tmp_new_query_str, *new_query_str;
+	char *stmt_str="", *query_str, *tmp_new_query_str, *new_query_str;
 	char *new_io_buf;
 	char *remaining_buffer_ptr;
 	int new_pkt_len, remaining_buffer_len;
