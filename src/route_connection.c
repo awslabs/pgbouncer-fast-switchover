@@ -63,7 +63,7 @@ bool route_client_connection(PgSocket *client, PktHdr *pkt) {
 	if (strcmp(cf_routing_rules_py_module_file, "not_enabled") == 0) {
 		slog_debug(client,
 				"Query routing not enabled in config (routing_rules_py_module_file)");
-		return false;
+		return true;
 	}
 
 	dbname = pycall(client, client->auth_user->name, query_str, cf_routing_rules_py_module_file,

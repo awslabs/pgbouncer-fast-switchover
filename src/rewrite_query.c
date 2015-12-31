@@ -34,13 +34,13 @@ bool is_rewritten(char *query);
 bool rewrite_query(PgSocket *client, PktHdr *pkt) {
 	SBuf *sbuf = &client->sbuf;
 	char *pkt_start;
-	char *stmt_str="", *query_str, *tmp_new_query_str, *new_query_str;
+	char *stmt_str="", *query_str, *loggable_query_str, *tmp_new_query_str, *new_query_str;
 	char *new_io_buf;
 	char *remaining_buffer_ptr;
 	int new_pkt_len, remaining_buffer_len;
 	int i;
 
-	if (!is_rewrite_enabled(client)) return false;
+	if (!is_rewrite_enabled(client)) return true;
 	if (!handle_incomplete_packet(client, pkt)) return false;
 
 	/* extract query string from packet */
@@ -61,13 +61,14 @@ bool rewrite_query(PgSocket *client, PktHdr *pkt) {
 	} else {
 		fatal("Invalid packet type - expected Q or P, got %c", pkt->type);
 	}
-	query_str = strip_newlines(query_str) ;
 
 	/* don't process same query again */
 	if (is_rewritten(query_str)) return true;
 
+	loggable_query_str = strip_newlines(query_str) ;
 	slog_debug(client, "rewrite_query: Username => %s", client->auth_user->name);
-	slog_debug(client, "rewrite_query: Orig Query=> %s", query_str);
+	slog_debug(client, "rewrite_query: Orig Query=> %s", loggable_query_str);
+	free(loggable_query_str);
 
 	/* call python function to rewrite the query */
 	tmp_new_query_str = pycall(client, client->auth_user->name, query_str, cf_rewrite_query_py_module_file,
@@ -78,7 +79,9 @@ bool rewrite_query(PgSocket *client, PktHdr *pkt) {
 	}
 	new_query_str = tag_rewritten(tmp_new_query_str);
 	free(tmp_new_query_str);
-	slog_debug(client, "rewrite_query: New => %s", new_query_str);
+	loggable_query_str = strip_newlines(new_query_str) ;
+	slog_debug(client, "rewrite_query: New => %s", loggable_query_str);
+	free(loggable_query_str);
 
 	/* new query must fit in the buffer */
 	if ((int)(sbuf->io->recv_pos + strlen(new_query_str) - strlen(query_str)) > (int)cf_sbuf_len) {
@@ -182,16 +185,19 @@ bool handle_failure(PgSocket *client) {
 	}
 }
 
-/* strip newlines from query string, so that it will print correctly in slog_ functions
+/* copy query string with no newlines, so that it will print correctly in slog_ functions
  */
 char *strip_newlines(char *s) {
+	char *n;
 	char *p1;
-	for (p1 = s; *p1; p1++) {
+	n = malloc(strlen(s)+1);
+	strcpy(n,s);
+	for (p1 = n; *p1; p1++) {
 		if (*p1 == '\n') {
 			*p1 = ' ';
 		}
 	}
-	return s;
+	return n;
 }
 
 /* query tagging to prevent multiple rewrite */
