@@ -1,5 +1,24 @@
---- /home/ec2-user/TEST/pgbouncer/src/client.c	2015-12-08 17:31:44.636667196 -0500
-+++ ./src/client.c	2015-12-08 14:57:27.526236225 -0500
+--- /home/ec2-user/TEST/pgbouncer//src/client.c	2016-01-27 15:12:27.590918753 -0500
++++ ./src/client.c	2016-01-27 15:06:34.639677351 -0500
+@@ -423,16 +423,16 @@ static bool decide_startup_pool(PgSocket
+ 		} else if (strcmp(key, "user") == 0) {
+ 			slog_debug(client, "got var: %s=%s", key, val);
+ 			username = val;
+ 		} else if (strcmp(key, "application_name") == 0) {
+ 			set_appname(client, val);
+ 			appname_found = true;
+-		} else if (varcache_set(&client->vars, key, val)) {
+-			slog_debug(client, "got var: %s=%s", key, val);
+ 		} else if (strlist_contains(cf_ignore_startup_params, key)) {
+ 			slog_debug(client, "ignoring startup parameter: %s=%s", key, val);
++		} else if (varcache_set(&client->vars, key, val)) {
++			slog_debug(client, "got var: %s=%s", key, val);
+ 		} else {
+ 			slog_warning(client, "unsupported startup parameter: %s=%s", key, val);
+ 			disconnect_client(client, true, "Unsupported startup parameter: %s", key);
+ 			return false;
+ 		}
+ 	}
 @@ -632,12 +632,20 @@ static bool handle_client_work(PgSocket
  		client->query_start = get_cached_time();
  	}
