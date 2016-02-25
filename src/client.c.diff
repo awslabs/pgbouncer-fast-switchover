@@ -1,5 +1,5 @@
---- /home/ec2-user/TEST/pgbouncer//src/client.c	2016-01-27 15:12:27.590918753 -0500
-+++ ./src/client.c	2016-01-27 15:06:34.639677351 -0500
+--- ../pgbouncer/src/client.c	2016-02-25 17:40:13.535332888 -0500
++++ ./src/client.c	2016-02-25 17:39:16.065977034 -0500
 @@ -423,16 +423,16 @@ static bool decide_startup_pool(PgSocket
  		} else if (strcmp(key, "user") == 0) {
  			slog_debug(client, "got var: %s=%s", key, val);

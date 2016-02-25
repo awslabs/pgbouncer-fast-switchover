@@ -1,6 +1,6 @@
---- /home/ec2-user/TEST/pgbouncer/src/main.c	2015-12-08 17:31:44.637667220 -0500
-+++ ./src/main.c	2015-12-08 17:56:00.589177003 -0500
-@@ -138,12 +138,17 @@ int cf_stats_period;
+--- ../pgbouncer/src/main.c	2016-02-25 17:40:13.535332888 -0500
++++ ./src/main.c	2016-02-25 17:39:16.065977034 -0500
+@@ -139,12 +139,17 @@ int cf_stats_period;
  
  int cf_log_connections;
  int cf_log_disconnections;
@@ -18,7 +18,7 @@
  char *cf_client_tls_cert_file;
  char *cf_client_tls_key_file;
  char *cf_client_tls_ciphers;
-@@ -264,12 +269,17 @@ CF_ABS("stats_users", CF_STR, cf_stats_u
+@@ -265,12 +270,17 @@ CF_ABS("stats_users", CF_STR, cf_stats_u
  CF_ABS("stats_period", CF_INT, cf_stats_period, 0, "60"),
  CF_ABS("log_connections", CF_INT, cf_log_connections, 0, "1"),
  CF_ABS("log_disconnections", CF_INT, cf_log_disconnections, 0, "1"),
