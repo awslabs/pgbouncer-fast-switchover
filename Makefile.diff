@@ -1,5 +1,5 @@
---- /home/ec2-user/TEST/pgbouncer/Makefile	2015-12-29 17:32:40.174622100 -0500
-+++ ./Makefile	2015-12-29 17:30:59.946064408 -0500
+--- ../pgbouncer/Makefile	2016-02-25 17:40:13.531332793 -0500
++++ ./Makefile	2016-02-25 17:39:16.064977011 -0500
 @@ -18,12 +18,15 @@ pgbouncer_SOURCES = \
  	src/sbuf.c \
  	src/server.c \
@@ -45,19 +45,21 @@
  DIST_SUBDIRS = doc test
  dist_man_MANS = doc/pgbouncer.1 doc/pgbouncer.5
  
-@@ -81,13 +88,14 @@ CPPFLAGS += -DDBGVER="\"compiled by <$${
- endif
+@@ -77,14 +84,15 @@ LIBUSUAL_DIST = $(filter-out %/config.h,
+ 		lib/find_modules.sh ))
  
  #
  # win32
  #
  
 -pgbouncer_LDFLAGS := $(TLS_LDFLAGS)
+-pgbouncer_LDADD := $(CARES_LIBS) $(TLS_LIBS) $(LIBS)
 +python_LDFLAGS = -lpthread -ldl -lutil -lm -lpython2.7 -Xlinker -export-dynamic
-+pgbouncer_LDFLAGS := $(TLS_LDFLAGS) $(python_LDFLAGS)
- pgbouncer_LDADD := $(CARES_LIBS) $(TLS_LIBS) $(LIBS)
++pgbouncer_LDFLAGS := $(TLS_LDFLAGS) 
++pgbouncer_LDADD := $(CARES_LIBS) $(TLS_LIBS) $(LIBS) $(python_LDFLAGS)
  LIBS :=
  
  EXTRA_pgbouncer_SOURCES = win32/win32support.c win32/win32support.h
  EXTRA_PROGRAMS = pgbevent
  ifeq ($(PORTNAME),win32)
+ pgbouncer_CPPFLAGS += -Iwin32
