@@ -30,7 +30,7 @@
 +CF_ABS("rewrite_query_py_module_file", CF_STR, cf_rewrite_query_py_module_file, 0, "not_enabled"),
 +CF_ABS("rewrite_query_disconnect_on_failure", CF_STR, cf_rewrite_query_disconnect_on_failure, 0, "false"),
 +
- CF_ABS("client_tls_sslmode", CF_LOOKUP(sslmode_map), cf_client_tls_sslmode, CF_NO_RELOAD, "disabled"),
+ CF_ABS("client_tls_sslmode", CF_LOOKUP(sslmode_map), cf_client_tls_sslmode, CF_NO_RELOAD, "disable"),
  CF_ABS("client_tls_ca_file", CF_STR, cf_client_tls_ca_file, CF_NO_RELOAD, ""),
  CF_ABS("client_tls_cert_file", CF_STR, cf_client_tls_cert_file, CF_NO_RELOAD, ""),
  CF_ABS("client_tls_key_file", CF_STR, cf_client_tls_key_file, CF_NO_RELOAD, ""),
