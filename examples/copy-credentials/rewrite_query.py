@@ -10,7 +10,7 @@ def rewrite_query(username, query):
         new_query = re.sub(cred_pattern, repl_pattern, query).replace("\n"," ")
     else:
         new_query = query
-    return new_query
+    return str(new_query)
 
 if __name__ == "__main__":
     # some tests
