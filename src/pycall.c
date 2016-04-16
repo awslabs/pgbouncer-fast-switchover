@@ -41,6 +41,13 @@ char *pycall(PgSocket *client, char *username, char *query_str, char *py_file,
 	if (ext)
 		ext[0] = '\0';
 
+        /* Initialize the Python interpreter
+         * NOTE: This call is a no-op on subsequent calls, as we do not 
+         * call PyFinalize(). This 
+         * a) avoids the overhead of repeatedly reloading the interpreter
+         * b) allows the use of global variables for persisting data in the
+         *    routing / rewriting functions between calls.
+         */
 	Py_Initialize();
 
 	/* Load python module */
