@@ -31,7 +31,8 @@ char *pycall(PgSocket *client, char *username, char *query_str, char *py_file,
 	strcpy(py_pathtmp, py_file);
 	py_path = malloc(strlen(py_file) + 20) ;
         sprintf(py_path,"PYTHONPATH=%s",dirname(py_pathtmp)) ;
-	putenv(py_path) ; 
+	putenv(py_path) ;
+	free(py_path);
 
 	/* setup python module name, function name */
 	py_filetmp = malloc(strlen(py_file) + 1);
