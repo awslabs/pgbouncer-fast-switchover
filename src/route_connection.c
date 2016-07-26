@@ -70,6 +70,7 @@ bool route_client_connection(PgSocket *client, PktHdr *pkt) {
 			"routing_rules");
 	if (dbname == NULL) {
 		slog_debug(client, "routing_rules returned 'None' - existing connection preserved");
+		free(dbname);
 		return false;
 	}
 
@@ -79,6 +80,7 @@ bool route_client_connection(PgSocket *client, PktHdr *pkt) {
 				"nonexistant database key <%s> returned by routing_rules",
 				dbname);
 		slog_error(client, "check ini and/or routing rules function");
+		free(dbname);
 		return false;
 	}
 	pool = get_pool(db, client->auth_user);
@@ -97,6 +99,7 @@ bool route_client_connection(PgSocket *client, PktHdr *pkt) {
 	} else {
 		slog_debug(client, "already connected to pool <%s>", dbname);
 	}
+	free(dbname);
 	return true;
 }
 
