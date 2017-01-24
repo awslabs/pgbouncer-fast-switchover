@@ -187,7 +187,7 @@ SELECT prodname, SUM(total) FROM product_sales GROUP BY prodname ORDER BY prodna
 Download and install pgbouncer-rr by running the following commands (Amazon Linux/RHEL/CentOS):
 ```
 # install required packages
-sudo yum install libevent-devel openssl-devel git libtool python-devel -y
+sudo yum install libevent-devel openssl-devel python-devel libtool git patch make -y
 
 # download the latest pgbouncer distribution
 git clone https://github.com/pgbouncer/pgbouncer.git
