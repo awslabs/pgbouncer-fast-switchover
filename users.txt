@@ -1,1 +1,1 @@
-/opt/dhaus_secrets/current/pgbouncer/users.txt
+"master" "md5d53e09da43d22ba5c13ae2167a94b913"
