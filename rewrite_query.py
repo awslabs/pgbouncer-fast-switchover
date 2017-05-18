@@ -21,7 +21,9 @@
 import re
 def rewrite_query(username, query):
     if re.match(username, "user_with_limited_access"):
-	new_query = re.sub(r'clockwork_unsanitized.members', 'clockwork_unsanitized.members_obfuscated', query)
+        string_replace = re.compile(re.escape('clockwork.'), re.IGNORECASE)
+        new_query = string_replace.sub('clockwork.view_', query)
+	#new_query = re.sub(r'clockwork_unsanitized.members', 'clockwork_unsanitized.members_obfuscated', query)
         # new line
     else:
 	new_query = query
