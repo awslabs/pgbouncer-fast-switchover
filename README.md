@@ -1,4 +1,4 @@
-#Query Routing and Rewrite: Introducing pgbouncer-rr for Amazon Redshift and PostgreSQL
+# Query Routing and Rewrite: Introducing pgbouncer-rr for Amazon Redshift and PostgreSQL
 
 Have you ever wanted to split your database load across multiple servers or clusters without impacting the configuration or code of your client applications? Or perhaps you have wished for a way to intercept and modify application queries, so that you can make them use optimized tables (sorted, pre-joined, pre-aggregated, etc.), add security filters, or hide changes you have made in the schema?  
 
@@ -16,7 +16,7 @@ Documentation and community support for pgbouncer can be easily found [online](h
 
 Now I’d like to talk about the query routing and query rewrite feature enhancements.
 
-##Query Routing
+## Query Routing
 
 The routing feature maps client connections to server connections using a Python routing function which you provide. Your function is called for each query, with the client username and the query string as parameters. Its return value must identify the target database server; how it does this is entirely up to you.  
 
@@ -46,7 +46,7 @@ The route function is called only for query and prepare packets, with the follow
 - If your application uses database catalog tables to discover the schema, then the routing_rules function should direct catalog table queries to a database server that has all the relevant schema objects created.   
 
 
-####Simple Query Routing Example
+#### Simple Query Routing Example
  
 Amazon Redshift cluster 1 has data in table 'tablea'. Amazon Redshift cluster 2 has data in table 'tableb'. You want a client to be able to issue queries against either tablea or tableb without needing to know which table resides on which cluster.  
 
@@ -110,7 +110,7 @@ def routing_rules(username, query):
 You will most likely want to implement more robust and sophisticated rules, taking care to avoid unintended matches. Write test cases to call your function with different inputs and validate the output dbkey values.  
 
 
-##Query Rewrite
+## Query Rewrite
 
 The rewrite feature provides the opportunity to manipulate application queries en route to the server, without modifying application code. You might want to do this to:
  - Optimize an incoming query to use the best physical tables, when you have: 
@@ -134,7 +134,7 @@ Enabling the query rewrite function triggers pgbouncer-rr to enforce that a comp
 If a partially received query is detected, and there is room in the buffer for the remainder of the query, pgbouncer-rr waits for the remaining packets to be received before processing the query. If the buffer is not large enough for the incoming query, or if it is not large enough to hold the re-written query (which may be longer than the original), then the rewrite function will fail. By default, the failure is logged, and the original query string will be passed to the server unchanged. You can force the client connection to terminate instead, by setting:  `rewrite_query_disconnect_on_failure = true`.  
 
  
-####Simple Query Rewrite Example
+#### Simple Query Rewrite Example
 
 Scenario:  
 You have a star schema with a large fact table in Redshift (say, 'sales') with two related dimension tables (say 'store' and 'product'). You want to optimize equally for two different queries:
