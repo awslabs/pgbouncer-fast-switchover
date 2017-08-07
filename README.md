@@ -235,11 +235,11 @@ If you are running pgbouncer-rr on an Amazon EC2 instance, the instance Security
   
 **Launch**  
 Run pgbouncer-rr as a daemon using the commandline `pgbouncer <config_file> -d`.   
-See `pgbouncer --help` for commandline options. _Hint: use `-v -v` to enable verbose logging. If you look carefully in the logfile you will see evidence of the query routing and query rewrite features in action._  
+See `pgbouncer --help` for commandline options. _Hint: use `-v` to enable verbose logging. If you look carefully in the logfile you will see evidence of the query routing and query rewrite features in action._  
 
 **Connect**  
 Configure your client application as though you were connecting directly to a Redshift or PostgreSQL database, but be sure to use the pgbouncer-rr hostname and listening port.  
-Example – using plsql   
+Example – using psql   
 ```
 psql -h pgbouncer-dnshostname -U dbuser -d dev -p 5439
 ```
