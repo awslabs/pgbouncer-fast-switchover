@@ -18,18 +18,34 @@
 
 # REWRITE FN - CALLED FROM PGBOUNCER - DO NOT CHANGE NAME
 # RETURNS MODIFIED QUERY STRING
+
 import re
+import logging
+import logging.handlers
+import os
+
+LOG_FILE = "/tmp/pgbouncer.log"
+
+# logging
+handler = logging.handlers.WatchedFileHandler(LOG_FILE)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger = logging.getLogger(__name__)
+logger.setLevel("INFO")
+logger.addHandler(handler)
+
 def rewrite_query(username, query):
+    logger.info("[*] rewriting query for user: %s" % username)
+
     if re.match(username, "user_with_limited_access"):
         string_replace = re.compile(re.escape('clockwork.'), re.IGNORECASE)
         new_query = string_replace.sub('clockwork.view_', query)
-	#new_query = re.sub(r'clockwork_unsanitized.members', 'clockwork_unsanitized.members_obfuscated', query)
-        # new line
+	    # new_query = re.sub(r'clockwork_unsanitized.members', 'clockwork_unsanitized.members_obfuscated', query)
     else:
-	new_query = query
+	    new_query = query
 
     return new_query
 
 
 if __name__ == "__main__":
-    print("rewriting queries!")
+    print("[*] pgbouncer: rewriting queries!")

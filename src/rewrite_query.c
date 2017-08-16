@@ -1,12 +1,12 @@
 /*
 Copyright 2015-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
-Licensed under the Amazon Software License (the "License"). 
+Licensed under the Amazon Software License (the "License").
 You may not use this file except in compliance with the License. A copy of the License is located at
 
     http://aws.amazon.com/asl/
 
-or in the "license" file accompanying this file. 
+or in the "license" file accompanying this file.
 This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions and limitations under the License.
 */
 
@@ -71,7 +71,11 @@ bool rewrite_query(PgSocket *client, PktHdr *pkt) {
 	free(loggable_query_str);
 
 	/* call python function to rewrite the query */
-	tmp_new_query_str = pycall(client, client->auth_user->name, query_str, cf_rewrite_query_py_module_file,
+	/*
+		since we are overriding users to pgb user, make sure we send the real original
+		user to rewrite_query so we can do filtering / obfuscation on it.
+	*/
+	tmp_new_query_str = pycall(client, client->auth_user->real_user, query_str, cf_rewrite_query_py_module_file,
 			"rewrite_query");
 	if (tmp_new_query_str == NULL) {
 		slog_debug(client, "query unchanged");
