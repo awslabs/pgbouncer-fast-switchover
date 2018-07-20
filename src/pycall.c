@@ -27,15 +27,28 @@ char *pycall(PgSocket *client, char *username, char *query_str, char *py_file,
 	char *res = NULL;
 
         /* setup python search path */
-	py_pathtmp = malloc(strlen(py_file) + 1);
-	strcpy(py_pathtmp, py_file);
+	py_pathtmp = strdup(py_file);
+	if (py_pathtmp == NULL) {
+		slog_error(client, "out of memory");
+		return NULL;
+	}
 	py_path = malloc(strlen(py_file) + 20) ;
+	if (py_path == NULL) {
+		slog_error(client, "out of memory");
+		free(py_pathtmp);
+		return NULL;
+	}
         sprintf(py_path,"PYTHONPATH=%s",dirname(py_pathtmp)) ;
 	putenv(py_path) ;
 
 	/* setup python module name, function name */
-	py_filetmp = malloc(strlen(py_file) + 1);
-	strcpy(py_filetmp, py_file);
+	py_filetmp = strdup(py_file);
+	if (py_filetmp == NULL) {
+		slog_error(client, "out of memory");
+		free(py_pathtmp);
+		free(py_path);
+		return NULL;
+	}
 	py_module = (char *) basename(py_filetmp);
 	ext = strrchr(py_module, '.');
 	if (ext)
@@ -52,6 +65,10 @@ char *pycall(PgSocket *client, char *username, char *query_str, char *py_file,
 
 	/* Load python module */
 	pName = PyString_FromString(py_module);
+	if (pName == NULL) {
+		slog_error(client, "Python module <%s> did not load", py_module);
+		goto finish;
+	}
 	pModule = PyImport_Import(pName);
 	if (pModule == NULL) {
 		slog_error(client, "Python module <%s> did not load", py_module);
@@ -74,9 +91,21 @@ char *pycall(PgSocket *client, char *username, char *query_str, char *py_file,
 
 	/* Call function with two arguments - username and query_str */
 	pArgs = PyTuple_New(2);
+	if (pArgs == NULL) {
+		slog_error(client, "Python module <%s>: out of memory", py_module);
+		goto finish;
+	}
 	pValue = PyString_FromString(username);
+	if (pValue == NULL) {
+		slog_error(client, "Python module <%s>: out of memory", py_module);
+		goto finish;
+	}
 	PyTuple_SetItem(pArgs, 0, pValue);
 	pValue = PyString_FromString(query_str);
+	if (pValue == NULL) {
+		slog_error(client, "Python module <%s>: out of memory", py_module);
+		goto finish;
+	}
 	PyTuple_SetItem(pArgs, 1, pValue);
 	pValue = PyObject_CallObject(pFunc, pArgs);
 	if (pValue == NULL) {
@@ -85,8 +114,7 @@ char *pycall(PgSocket *client, char *username, char *query_str, char *py_file,
 		goto finish;
 	}
 	if (PyString_Check(pValue)) {
-		res = malloc(strlen(PyString_AsString(pValue)) + 1);
-		strcpy(res, PyString_AsString(pValue));
+		res = strdup(PyString_AsString(pValue));
 	} else {
 		res = NULL;
 	}
