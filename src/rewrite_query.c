@@ -94,6 +94,9 @@ bool rewrite_query(PgSocket *client, PktHdr *pkt) {
 	/* manipulate the buffer to replace query */
 	/* clone buffer */
 	new_io_buf = malloc(cf_sbuf_len);
+	if (new_io_buf == NULL) {
+		fatal_perror("malloc");
+	}
 	memcpy(new_io_buf, sbuf->io->buf, cf_sbuf_len);
 	i = sbuf->io->parse_pos;
 	/* packet type */
@@ -141,8 +144,8 @@ bool is_rewrite_enabled(PgSocket *client) {
 	return true;
 }
 
-/* handle in complete packet in the buffer
- *  - if buffer is too small, the either
+/* handle incomplete packet in the buffer
+ *  - if buffer is too small, then either
  *     - continue without rewrite (if rewrite_query_disconnect_on_failure = false)
  *     - disconnect client (if rewrite_query_disconnect_on_failure = true)
  *  - if buffer is not too small, return false and allow main loop to wait for rest of packet
@@ -191,8 +194,10 @@ bool handle_failure(PgSocket *client) {
 char *strip_newlines(char *s) {
 	char *n;
 	char *p1;
-	n = malloc(strlen(s)+1);
-	strcpy(n,s);
+	n = strdup(s);
+	if (n == NULL) {
+		fatal_perror("strdup");
+	}
 	for (p1 = n; *p1; p1++) {
 		if (*p1 == '\n') {
 			*p1 = ' ';
@@ -205,8 +210,14 @@ char *strip_newlines(char *s) {
 char *tag_rewritten(char *query) {
 	char *tag = malloc(64);
 	char *taggedQuery ;
+	if (tag == NULL) {
+		fatal_perror("malloc");
+	}
 	sprintf(tag,"/* rewritten: pid=%05d */ ", getpid());
 	taggedQuery = malloc(strlen(tag)+strlen(query)+1);
+	if (taggedQuery == NULL) {
+		fatal_perror("malloc");
+	}
 	sprintf(taggedQuery, "%s%s", tag, query);
 	free(tag);
 	return taggedQuery;
@@ -214,6 +225,9 @@ char *tag_rewritten(char *query) {
 bool is_rewritten(char *query) {
 	bool is_tagged = false;
 	char *tag = malloc(64);
+	if (tag == NULL) {
+		fatal_perror("malloc");
+	}
 	sprintf(tag,"/* rewritten: pid=%05d */ ", getpid());
 	if (strstr(query,tag) == query){
 		is_tagged = true;
