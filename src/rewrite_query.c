@@ -87,6 +87,7 @@ bool rewrite_query(PgSocket *client, PktHdr *pkt) {
 	if ((int)(sbuf->io->recv_pos + strlen(new_query_str) - strlen(query_str)) > (int)cf_sbuf_len) {
 		slog_error(client,
 				"Rewritten query will not fit into the allocated buffer!");
+		free(new_query_str);
 		return handle_failure(client);
 	}
 
