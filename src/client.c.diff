@@ -1,8 +1,6 @@
-diff --git a/src/client.c b/src/client.c
-index 2a46e0d..4363736 100644
 --- a/src/client.c
 +++ b/src/client.c
-@@ -446,10 +446,10 @@ static bool decide_startup_pool(PgSocket *client, PktHdr *pkt)
+@@ -446,10 +446,10 @@ static bool decide_startup_pool(PgSocket
  		} else if (strcmp(key, "application_name") == 0) {
  			set_appname(client, val);
  			appname_found = true;
@@ -15,7 +13,7 @@ index 2a46e0d..4363736 100644
  		} else {
  			slog_warning(client, "unsupported startup parameter: %s=%s", key, val);
  			disconnect_client(client, true, "unsupported startup parameter: %s", key);
-@@ -678,6 +678,14 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
+@@ -678,6 +678,14 @@ static bool handle_client_work(PgSocket
  	if (client->pool->db->admin)
  		return admin_handle_client(client, pkt);
  

@@ -1,9 +1,6 @@
---- ../pgbouncer/Makefile	2016-02-25 17:40:13.531332793 -0500
-+++ ./Makefile	2016-02-25 17:39:16.064977011 -0500
-@@ -18,12 +18,15 @@ pgbouncer_SOURCES = \
- 	src/sbuf.c \
- 	src/server.c \
- 	src/stats.c \
+--- a/Makefile
++++ b/Makefile
+@@ -22,6 +22,9 @@ pgbouncer_SOURCES = \
  	src/system.c \
  	src/takeover.c \
  	src/util.c \
@@ -13,13 +10,7 @@
  	src/varcache.c \
  	include/admin.h \
  	include/bouncer.h \
- 	include/client.h \
- 	include/dnslookup.h \
- 	include/hba.h \
-@@ -37,22 +40,26 @@ pgbouncer_SOURCES = \
- 	include/sbuf.h \
- 	include/server.h \
- 	include/stats.h \
+@@ -42,16 +45,20 @@ pgbouncer_SOURCES = \
  	include/system.h \
  	include/takeover.h \
  	include/util.h \
@@ -29,7 +20,7 @@
  	include/varcache.h
  
 -pgbouncer_CPPFLAGS = -Iinclude $(CARES_CFLAGS) $(TLS_CPPFLAGS)
-+python_CPPFLAGS = -I/usr/include/python2.7 -I/usr/include/python2.7 
++python_CPPFLAGS = -I/usr/include/python2.7 -I/usr/include/python2.7
 +pgbouncer_CPPFLAGS = -Iinclude $(CARES_CFLAGS) $(TLS_CPPFLAGS) $(python_CPPFLAGS)
  
  # include libusual sources directly
@@ -42,24 +33,14 @@
  
  DISTCLEANFILES = config.mak config.status lib/usual/config.h config.log
  
- DIST_SUBDIRS = doc test
- dist_man_MANS = doc/pgbouncer.1 doc/pgbouncer.5
+@@ -78,8 +85,9 @@ LIBUSUAL_DIST = $(filter-out %/config.h,
+ 		lib/README lib/COPYRIGHT \
+ 		lib/find_modules.sh )))
  
-@@ -77,14 +84,15 @@ LIBUSUAL_DIST = $(filter-out %/config.h,
- 		lib/find_modules.sh ))
- 
- #
- # win32
- #
- 
--pgbouncer_LDFLAGS := $(TLS_LDFLAGS)
--pgbouncer_LDADD := $(CARES_LIBS) $(TLS_LIBS) $(LIBS)
 +python_LDFLAGS = -lpthread -ldl -lutil -lm -lpython2.7 -Xlinker -export-dynamic
-+pgbouncer_LDFLAGS := $(TLS_LDFLAGS) 
+ pgbouncer_LDFLAGS := $(TLS_LDFLAGS)
+-pgbouncer_LDADD := $(CARES_LIBS) $(TLS_LIBS) $(LIBS)
 +pgbouncer_LDADD := $(CARES_LIBS) $(TLS_LIBS) $(LIBS) $(python_LDFLAGS)
  LIBS :=
  
- EXTRA_pgbouncer_SOURCES = win32/win32support.c win32/win32support.h
- EXTRA_PROGRAMS = pgbevent
- ifeq ($(PORTNAME),win32)
- pgbouncer_CPPFLAGS += -Iwin32
+ #
