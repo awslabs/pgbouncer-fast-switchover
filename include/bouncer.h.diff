@@ -1,9 +1,8 @@
---- /home/ec2-user/TEST/pgbouncer/include/bouncer.h	2015-12-08 17:31:44.635667172 -0500
-+++ ./include/bouncer.h	2015-12-08 14:57:27.525236201 -0500
-@@ -88,12 +88,17 @@ typedef struct PgStats PgStats;
- typedef union PgAddr PgAddr;
- typedef enum SocketState SocketState;
- typedef struct PktHdr PktHdr;
+diff --git a/include/bouncer.h b/include/bouncer.h
+index 96eb66c..3b286fe 100644
+--- a/include/bouncer.h
++++ b/include/bouncer.h
+@@ -87,6 +87,11 @@ typedef struct PktHdr PktHdr;
  
  extern int cf_sbuf_len;
  
@@ -15,13 +14,7 @@
  #include "util.h"
  #include "iobuf.h"
  #include "sbuf.h"
- #include "pktbuf.h"
- #include "varcache.h"
- #include "dnslookup.h"
-@@ -457,12 +462,17 @@ extern int cf_tcp_defer_accept;
- 
- extern int cf_log_connections;
- extern int cf_log_disconnections;
+@@ -468,6 +473,11 @@ extern int cf_log_disconnections;
  extern int cf_log_pooler_errors;
  extern int cf_application_name_add_host;
  
@@ -33,6 +26,3 @@
  extern int cf_client_tls_sslmode;
  extern char *cf_client_tls_protocols;
  extern char *cf_client_tls_ca_file;
- extern char *cf_client_tls_cert_file;
- extern char *cf_client_tls_key_file;
- extern char *cf_client_tls_ciphers;

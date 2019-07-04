@@ -1,14 +1,14 @@
 diff --git a/Makefile b/Makefile
-index 2e13d00..cdce15b 100644
+index 2e13d00..f5ecb12 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -22,6 +22,9 @@ pgbouncer_SOURCES = \
  	src/system.c \
  	src/takeover.c \
  	src/util.c \
-+        src/pycall.c \
-+        src/route_connection.c \
-+        src/rewrite_query.c \
++	src/pycall.c \
++	src/route_connection.c \
++	src/rewrite_query.c \
  	src/varcache.c \
  	include/admin.h \
  	include/bouncer.h \
@@ -22,7 +22,7 @@ index 2e13d00..cdce15b 100644
  	include/varcache.h
  
 -pgbouncer_CPPFLAGS = -Iinclude $(CARES_CFLAGS) $(TLS_CPPFLAGS)
-+python_CPPFLAGS = -I/usr/include/python2.7 -I/usr/include/python2.7 
++python_CPPFLAGS = -I/usr/include/python2.7 -I/usr/include/python2.7
 +pgbouncer_CPPFLAGS = -Iinclude $(CARES_CFLAGS) $(TLS_CPPFLAGS) $(python_CPPFLAGS)
  
  # include libusual sources directly
@@ -37,7 +37,7 @@ index 2e13d00..cdce15b 100644
  
  DIST_SUBDIRS = doc test
 -dist_man_MANS = doc/pgbouncer.1 doc/pgbouncer.5
-+dist_man_MANS = 
++dist_man_MANS =
  
  # files in tgz
  EXTRA_DIST = AUTHORS COPYRIGHT Makefile config.mak.in config.sub config.guess \
@@ -45,10 +45,9 @@ index 2e13d00..cdce15b 100644
  		lib/README lib/COPYRIGHT \
  		lib/find_modules.sh )))
  
--pgbouncer_LDFLAGS := $(TLS_LDFLAGS)
--pgbouncer_LDADD := $(CARES_LIBS) $(TLS_LIBS) $(LIBS)
 +python_LDFLAGS = -lpthread -ldl -lutil -lm -lpython2.7 -Xlinker -export-dynamic
-+pgbouncer_LDFLAGS := $(TLS_LDFLAGS) 
+ pgbouncer_LDFLAGS := $(TLS_LDFLAGS)
+-pgbouncer_LDADD := $(CARES_LIBS) $(TLS_LIBS) $(LIBS)
 +pgbouncer_LDADD := $(CARES_LIBS) $(TLS_LIBS) $(LIBS) $(python_LDFLAGS)
  LIBS :=
  
