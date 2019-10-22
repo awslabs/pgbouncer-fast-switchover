@@ -1,9 +1,8 @@
---- ../pgbouncer/Makefile	2016-02-25 17:40:13.531332793 -0500
-+++ ./Makefile	2016-02-25 17:39:16.064977011 -0500
-@@ -18,12 +18,15 @@ pgbouncer_SOURCES = \
- 	src/sbuf.c \
- 	src/server.c \
- 	src/stats.c \
+diff --git a/Makefile b/Makefile
+index 2e13d00..cdce15b 100644
+--- a/Makefile
++++ b/Makefile
+@@ -22,6 +22,9 @@ pgbouncer_SOURCES = \
  	src/system.c \
  	src/takeover.c \
  	src/util.c \
@@ -13,19 +12,13 @@
  	src/varcache.c \
  	include/admin.h \
  	include/bouncer.h \
- 	include/client.h \
- 	include/dnslookup.h \
- 	include/hba.h \
-@@ -37,22 +40,26 @@ pgbouncer_SOURCES = \
- 	include/sbuf.h \
- 	include/server.h \
- 	include/stats.h \
+@@ -42,21 +45,25 @@ pgbouncer_SOURCES = \
  	include/system.h \
  	include/takeover.h \
  	include/util.h \
-+        include/pycall.h \
-+        include/route_connection.h \
-+        include/rewrite_query.h \
++	include/pycall.h \
++	include/route_connection.h \
++	include/rewrite_query.h \
  	include/varcache.h
  
 -pgbouncer_CPPFLAGS = -Iinclude $(CARES_CFLAGS) $(TLS_CPPFLAGS)
@@ -37,20 +30,20 @@
  pgbouncer_EMBED_LIBUSUAL = 1
  
  # docs to install as-is
--dist_doc_DATA = README.rst NEWS.rst etc/pgbouncer.ini etc/userlist.txt
-+dist_doc_DATA = README.md README.rst NEWS.rst etc/pgbouncer.ini etc/userlist.txt
+-dist_doc_DATA = README.md NEWS.md etc/pgbouncer.ini etc/userlist.txt
++dist_doc_DATA = README.md etc/pgbouncer.ini etc/userlist.txt
  
  DISTCLEANFILES = config.mak config.status lib/usual/config.h config.log
  
  DIST_SUBDIRS = doc test
- dist_man_MANS = doc/pgbouncer.1 doc/pgbouncer.5
+-dist_man_MANS = doc/pgbouncer.1 doc/pgbouncer.5
++dist_man_MANS = 
  
-@@ -77,14 +84,15 @@ LIBUSUAL_DIST = $(filter-out %/config.h,
- 		lib/find_modules.sh ))
- 
- #
- # win32
- #
+ # files in tgz
+ EXTRA_DIST = AUTHORS COPYRIGHT Makefile config.mak.in config.sub config.guess \
+@@ -78,8 +85,9 @@ LIBUSUAL_DIST = $(filter-out %/config.h, $(sort $(wildcard \
+ 		lib/README lib/COPYRIGHT \
+ 		lib/find_modules.sh )))
  
 -pgbouncer_LDFLAGS := $(TLS_LDFLAGS)
 -pgbouncer_LDADD := $(CARES_LIBS) $(TLS_LIBS) $(LIBS)
@@ -59,7 +52,4 @@
 +pgbouncer_LDADD := $(CARES_LIBS) $(TLS_LIBS) $(LIBS) $(python_LDFLAGS)
  LIBS :=
  
- EXTRA_pgbouncer_SOURCES = win32/win32support.c win32/win32support.h
- EXTRA_PROGRAMS = pgbevent
- ifeq ($(PORTNAME),win32)
- pgbouncer_CPPFLAGS += -Iwin32
+ #

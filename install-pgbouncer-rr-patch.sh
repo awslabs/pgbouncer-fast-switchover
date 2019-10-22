@@ -75,8 +75,8 @@ if [ $patchstatus -eq 1 ]; then
    echo "See error messages above."
    echo "Possible causes: "
    echo "   pgbouncer-rr-patch already installed in target directory?"
-   echo "   new version of pgbouncer with changed source files that can't be patched?"
-   echo "      - tested with pgbouncer v1.7.1"
+   echo "   incompatible version of pgbouncer with changed source files that can't be patched?"
+   echo "      - last updated and tested with pgbouncer v1.9.0"
    echo "Status: pgbouncer-rr-patch merge FAILED"
 else
    echo "Status: pgbouncer-rr-patch merge SUCEEDED"
