@@ -1,8 +1,9 @@
-diff --git a/src/client.c b/src/client.c
-index 2a46e0d..4363736 100644
---- a/src/client.c
-+++ b/src/client.c
-@@ -446,10 +446,10 @@ static bool decide_startup_pool(PgSocket *client, PktHdr *pkt)
+--- ../pgbouncer/src/client.c	2020-04-26 15:20:51.660323326 -0400
++++ ./src/client.c	2020-04-26 15:19:04.085959392 -0400
+@@ -480,16 +480,16 @@ static bool decide_startup_pool(PgSocket
+ 		} else if (strcmp(key, "user") == 0) {
+ 			slog_debug(client, "got var: %s=%s", key, val);
+ 			username = val;
  		} else if (strcmp(key, "application_name") == 0) {
  			set_appname(client, val);
  			appname_found = true;
@@ -15,7 +16,13 @@ index 2a46e0d..4363736 100644
  		} else {
  			slog_warning(client, "unsupported startup parameter: %s=%s", key, val);
  			disconnect_client(client, true, "unsupported startup parameter: %s", key);
-@@ -678,6 +678,14 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
+ 			return false;
+ 		}
+ 	}
+@@ -861,12 +861,20 @@ static bool handle_client_work(PgSocket
+ 		client->xact_start = client->query_start;
+ 	}
+ 
  	if (client->pool->db->admin)
  		return admin_handle_client(client, pkt);
  
@@ -30,3 +37,6 @@ index 2a46e0d..4363736 100644
  	/* acquire server */
  	if (!find_server(client))
  		return false;
+ 
+ 	/* postpone rfq change until certain that client will not be paused */
+ 	if (rfq_delta) {

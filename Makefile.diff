@@ -1,29 +1,45 @@
-diff --git a/Makefile b/Makefile
-index 2e13d00..cdce15b 100644
---- a/Makefile
-+++ b/Makefile
-@@ -22,6 +22,9 @@ pgbouncer_SOURCES = \
+--- ../pgbouncer/Makefile	2020-04-26 15:20:51.655323355 -0400
++++ ./Makefile	2020-04-26 14:54:45.004586868 -0400
+@@ -18,12 +18,15 @@ pgbouncer_SOURCES = \
+ 	src/proto.c \
+ 	src/sbuf.c \
+ 	src/scram.c \
+ 	src/server.c \
+ 	src/stats.c \
  	src/system.c \
- 	src/takeover.c \
- 	src/util.c \
 +        src/pycall.c \
 +        src/route_connection.c \
 +        src/rewrite_query.c \
+ 	src/takeover.c \
+ 	src/util.c \
  	src/varcache.c \
- 	include/admin.h \
- 	include/bouncer.h \
-@@ -42,21 +45,25 @@ pgbouncer_SOURCES = \
+ 	src/common/base64.c \
+ 	src/common/saslprep.c \
+ 	src/common/scram-common.c \
+@@ -44,36 +47,41 @@ pgbouncer_SOURCES = \
+ 	include/proto.h \
+ 	include/sbuf.h \
+ 	include/scram.h \
+ 	include/server.h \
+ 	include/stats.h \
  	include/system.h \
++        include/pycall.h \
++        include/route_connection.h \
++        include/rewrite_query.h \
  	include/takeover.h \
  	include/util.h \
-+	include/pycall.h \
-+	include/route_connection.h \
-+	include/rewrite_query.h \
- 	include/varcache.h
+ 	include/varcache.h \
+ 	include/common/base64.h \
+ 	include/common/pg_wchar.h \
+ 	include/common/postgres_compat.h \
+ 	include/common/saslprep.h \
+ 	include/common/scram-common.h \
+ 	include/common/unicode_norm.h \
+ 	include/common/unicode_norm_table.h
  
--pgbouncer_CPPFLAGS = -Iinclude $(CARES_CFLAGS) $(TLS_CPPFLAGS)
-+python_CPPFLAGS = -I/usr/include/python2.7 -I/usr/include/python2.7 
-+pgbouncer_CPPFLAGS = -Iinclude $(CARES_CFLAGS) $(TLS_CPPFLAGS) $(python_CPPFLAGS)
+-pgbouncer_CPPFLAGS = -Iinclude $(CARES_CFLAGS) $(LIBEVENT_CFLAGS) $(TLS_CPPFLAGS)
++python_CPPFLAGS = -I/usr/include/python2.7 -I/usr/include/python2.7
++pgbouncer_CPPFLAGS = -Iinclude $(CARES_CFLAGS) $(LIBEVENT_CFLAGS) $(TLS_CPPFLAGS) $(python_CPPFLAGS)
  
  # include libusual sources directly
  AM_FEATURES = libusual
@@ -32,6 +48,7 @@ index 2e13d00..cdce15b 100644
  # docs to install as-is
 -dist_doc_DATA = README.md NEWS.md etc/pgbouncer.ini etc/userlist.txt
 +dist_doc_DATA = README.md etc/pgbouncer.ini etc/userlist.txt
++
  
  DISTCLEANFILES = config.mak config.status lib/usual/config.h config.log
  
@@ -41,15 +58,24 @@ index 2e13d00..cdce15b 100644
  
  # files in tgz
  EXTRA_DIST = AUTHORS COPYRIGHT Makefile config.mak.in config.sub config.guess \
-@@ -78,8 +85,9 @@ LIBUSUAL_DIST = $(filter-out %/config.h, $(sort $(wildcard \
+ 	     install-sh autogen.sh configure configure.ac \
+ 	     etc/mkauth.py etc/optscan.sh etc/example.debian.init.sh \
+ 	     win32/Makefile \
+@@ -88,14 +96,16 @@ LIBUSUAL_DIST = $(filter-out %/config.h,
+ 		lib/mk/*.mk \
+ 		lib/mk/antimake.mk lib/mk/antimake.txt \
+ 		lib/mk/install-sh lib/mk/std-autogen.sh \
  		lib/README lib/COPYRIGHT \
  		lib/find_modules.sh )))
  
--pgbouncer_LDFLAGS := $(TLS_LDFLAGS)
--pgbouncer_LDADD := $(CARES_LIBS) $(TLS_LIBS) $(LIBS)
 +python_LDFLAGS = -lpthread -ldl -lutil -lm -lpython2.7 -Xlinker -export-dynamic
-+pgbouncer_LDFLAGS := $(TLS_LDFLAGS) 
-+pgbouncer_LDADD := $(CARES_LIBS) $(TLS_LIBS) $(LIBS) $(python_LDFLAGS)
+ pgbouncer_LDFLAGS := $(TLS_LDFLAGS)
+-pgbouncer_LDADD := $(CARES_LIBS) $(LIBEVENT_LIBS) $(TLS_LIBS) $(LIBS)
++pgbouncer_LDADD := $(CARES_LIBS) $(LIBEVENT_LIBS) $(TLS_LIBS) $(LIBS) $(python_LDFLAGS)
++
  LIBS :=
  
  #
+ # win32
+ #
+ 
