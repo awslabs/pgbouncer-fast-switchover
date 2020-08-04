@@ -70,7 +70,6 @@ bool route_client_connection(PgSocket *client, PktHdr *pkt) {
 			"routing_rules");
 	if (dbname == NULL) {
 		slog_debug(client, "routing_rules returned 'None' - existing connection preserved");
-		free(dbname);
 		return false;
 	}
 
@@ -95,6 +94,11 @@ bool route_client_connection(PgSocket *client, PktHdr *pkt) {
 		slog_debug(client,
 				"assigning client to connection pool for database <%s>",
 				dbname);
+
+                /* Move the client over to the other pool for correct pool stats - needed for pool size maint */
+                statlist_remove(&client->pool->active_client_list, &client->head);
+                statlist_append(&pool->active_client_list, &client->head);
+
 		client->pool = pool;
 	} else {
 		slog_debug(client, "already connected to pool <%s>", dbname);
