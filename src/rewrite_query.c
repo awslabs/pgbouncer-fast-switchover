@@ -225,19 +225,32 @@ char *strip_newlines(char *s) {
 	return n;
 }
 
+#define rewritten_template "rewritten_pid='%05d'*/"
+
 /* query tagging to prevent multiple rewrite */
 char *tag_rewritten(char *query) {
 	char *tag = malloc(64);
-	char *taggedQuery ;
+	char *taggedQuery;
+	int len, offset;
 	if (tag == NULL) {
 		fatal_perror("malloc");
 	}
-	sprintf(tag,"/* rewritten: pid=%05d */ ", getpid());
-	taggedQuery = malloc(strlen(tag)+strlen(query)+1);
+    len = strlen(query);
+    if (len > 2 && query[len - 2] == '*' && query[len - 1] == '/') {
+	  tag[0] = ',';
+	  offset = 1;
+	} else {
+	  tag[0] = '/';
+	  tag[1] = '*';
+	  offset = 2;
+	}
+	sprintf(tag + offset, rewritten_template, getpid());
+	taggedQuery = malloc(strlen(tag) + strlen(query) + 1);
 	if (taggedQuery == NULL) {
 		fatal_perror("malloc");
 	}
-	sprintf(taggedQuery, "%s%s", tag, query);
+	strcpy(taggedQuery, query);
+	strcpy(taggedQuery + len - (2 - offset) * 2, tag);
 	free(tag);
 	return taggedQuery;
 }
@@ -247,8 +260,8 @@ bool is_rewritten(char *query) {
 	if (tag == NULL) {
 		fatal_perror("malloc");
 	}
-	sprintf(tag,"/* rewritten: pid=%05d */ ", getpid());
-	if (strstr(query,tag) == query){
+	sprintf(tag, rewritten_template, getpid());
+	if (strstr(query + strlen(query) - strlen(tag), tag) == query){
 		is_tagged = true;
 	}
 	free(tag);
