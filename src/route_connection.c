@@ -57,7 +57,7 @@ bool route_client_connection(PgSocket *client, PktHdr *pkt) {
 		fatal("Invalid packet type - expected Q or P, got %c", pkt->type);
 	}
 
-	slog_debug(client, "route_client_connection: Username => %s", client->auth_user->name);
+	slog_debug(client, "route_client_connection: Username => %s", client->login_user->name);
 	slog_debug(client, "route_client_connection: Query => %s", query_str);
 
 	if (strcmp(cf_routing_rules_py_module_file, "not_enabled") == 0) {
@@ -66,7 +66,7 @@ bool route_client_connection(PgSocket *client, PktHdr *pkt) {
 		return true;
 	}
 
-	dbname = pycall(client, client->auth_user->name, query_str, cf_routing_rules_py_module_file,
+	dbname = pycall(client, client->login_user->name, query_str, cf_routing_rules_py_module_file,
 			"routing_rules");
 	if (dbname == NULL) {
 		slog_debug(client, "routing_rules returned 'None' - existing connection preserved");
@@ -82,7 +82,7 @@ bool route_client_connection(PgSocket *client, PktHdr *pkt) {
 		free(dbname);
 		return false;
 	}
-	pool = get_pool(db, client->auth_user);
+	pool = get_pool(db, client->login_user);
 	if (client->pool != pool) {
 		if (client->link != NULL) {
 			/* release existing server connection back to pool */
