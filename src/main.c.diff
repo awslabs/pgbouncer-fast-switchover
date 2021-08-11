@@ -1,8 +1,9 @@
-diff --git a/src/main.c b/src/main.c
-index b96f14d..c103045 100644
---- a/src/main.c
-+++ b/src/main.c
-@@ -147,6 +147,11 @@ int cf_log_disconnections;
+--- ../pgbouncer/src/main.c	2020-04-26 15:20:51.662323314 -0400
++++ ./src/main.c	2020-04-26 15:19:21.995853494 -0400
+@@ -151,12 +151,17 @@ int cf_log_stats;
+ 
+ int cf_log_connections;
+ int cf_log_disconnections;
  int cf_log_pooler_errors;
  int cf_application_name_add_host;
  
@@ -14,7 +15,13 @@ index b96f14d..c103045 100644
  int cf_client_tls_sslmode;
  char *cf_client_tls_protocols;
  char *cf_client_tls_ca_file;
-@@ -282,6 +287,11 @@ CF_ABS("log_disconnections", CF_INT, cf_log_disconnections, 0, "1"),
+ char *cf_client_tls_cert_file;
+ char *cf_client_tls_key_file;
+ char *cf_client_tls_ciphers;
+@@ -287,12 +292,17 @@ CF_ABS("stats_period", CF_INT, cf_stats_
+ CF_ABS("log_stats", CF_INT, cf_log_stats, 0, "1"),
+ CF_ABS("log_connections", CF_INT, cf_log_connections, 0, "1"),
+ CF_ABS("log_disconnections", CF_INT, cf_log_disconnections, 0, "1"),
  CF_ABS("log_pooler_errors", CF_INT, cf_log_pooler_errors, 0, "1"),
  CF_ABS("application_name_add_host", CF_INT, cf_application_name_add_host, 0, "0"),
  
@@ -26,3 +33,6 @@ index b96f14d..c103045 100644
  CF_ABS("client_tls_sslmode", CF_LOOKUP(sslmode_map), cf_client_tls_sslmode, CF_NO_RELOAD, "disable"),
  CF_ABS("client_tls_ca_file", CF_STR, cf_client_tls_ca_file, CF_NO_RELOAD, ""),
  CF_ABS("client_tls_cert_file", CF_STR, cf_client_tls_cert_file, CF_NO_RELOAD, ""),
+ CF_ABS("client_tls_key_file", CF_STR, cf_client_tls_key_file, CF_NO_RELOAD, ""),
+ CF_ABS("client_tls_protocols", CF_STR, cf_client_tls_protocols, CF_NO_RELOAD, "secure"),
+ CF_ABS("client_tls_ciphers", CF_STR, cf_client_tls_ciphers, CF_NO_RELOAD, "fast"),
