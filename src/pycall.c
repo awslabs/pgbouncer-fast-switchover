@@ -22,7 +22,7 @@ char *pycall(PgSocket *client, char *username, char *query_str, char *py_file,
 		char* py_function) {
 	PyObject *pName = NULL, *pModule = NULL, *pFunc = NULL;
 	PyObject *pArgs = NULL, *pValue = NULL;
-	PyObject *ptype, *perror, *ptraceback, *bytes;
+	PyObject *ptype, *perror, *ptraceback, *bytes_obj, *string_obj;
 	char *py_pathtmp, *py_filetmp, *py_path, *py_module, *ext;
 	char *res = NULL;
 
@@ -114,9 +114,9 @@ char *pycall(PgSocket *client, char *username, char *query_str, char *py_file,
 		goto finish;
 	}
 	if (PyUnicode_Check(pValue)) {
-            bytes = PyUnicode_AsUTF8String(pValue);
-            res = strdup(PyBytes_AsString(bytes));
-            Py_DECREF(bytes);
+            bytes_obj = PyUnicode_AsUTF8String(pValue);
+            res = strdup(PyBytes_AsString(bytes_obj));
+            Py_DECREF(bytes_obj);
     } else {
             res = NULL;
     }
@@ -124,9 +124,12 @@ char *pycall(PgSocket *client, char *username, char *query_str, char *py_file,
     finish:
     if (PyErr_Occurred()) {
             PyErr_Fetch(&ptype, &perror, &ptraceback);
-            bytes = PyUnicode_AsUTF8String(perror);
-            slog_error(client, "Python error: %s", PyBytes_AsString(bytes));
-            Py_DECREF(bytes);
+            PyErr_NormalizeException(&ptype, &perror, &ptraceback);
+            string_obj = PyObject_Repr(perror);
+            bytes_obj = PyUnicode_AsUTF8String(string_obj);
+            slog_error(client, "Python error: %s", PyBytes_AsString(bytes_obj));
+            Py_DECREF(string_obj);
+            Py_DECREF(bytes_obj);
     }
 	free(py_pathtmp);
 	free(py_filetmp);
