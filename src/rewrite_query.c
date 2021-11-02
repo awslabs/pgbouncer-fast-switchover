@@ -18,13 +18,19 @@ This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS O
 #include "bouncer.h"
 #include <usual/pgutil.h>
 
+typedef enum {
+  kIncompletePacketDecisionContinue = 0,
+  kIncompletePacketDecisionDisable = 1,
+  kIncompletePacketDecisionDefer = 2,
+} IncompletePacketDecision;
+
 /* private function prototypes */
 char *call_python_rewrite_query(PgSocket *client, char *query_str);
 void printHex(void *buffer, const unsigned int n);
 char *strip_newlines(char *s);
 bool is_rewrite_enabled(PgSocket *client);
-bool handle_incomplete_packet(PgSocket *client, PktHdr *pkt);
-bool handle_failure(PgSocket *client);
+IncompletePacketDecision handle_incomplete_packet(PgSocket *client, PktHdr *pkt);
+IncompletePacketDecision handle_failure(PgSocket *client);
 char *tag_rewritten(char *query);
 bool is_rewritten(char *query);
 
@@ -41,7 +47,14 @@ bool rewrite_query(PgSocket *client, PktHdr *pkt) {
 	int i;
 
 	if (!is_rewrite_enabled(client)) return true;
-	if (!handle_incomplete_packet(client, pkt)) return false;
+	switch (handle_incomplete_packet(client, pkt)) {
+	case kIncompletePacketDecisionDisable:
+	    return true;
+	case kIncompletePacketDecisionDefer:
+	    return false;
+	case kIncompletePacketDecisionContinue:
+	    ;  // no-op
+	}
 
 	/* extract query string from packet */
 	/* first byte is the packet type (which we already know)
@@ -88,7 +101,13 @@ bool rewrite_query(PgSocket *client, PktHdr *pkt) {
 		slog_error(client,
 				"Rewritten query will not fit into the allocated buffer!");
 		free(new_query_str);
-		return handle_failure(client);
+		switch (handle_failure(client)) {
+		case kIncompletePacketDecisionDisable:
+		case kIncompletePacketDecisionContinue:
+		    return true;
+		case kIncompletePacketDecisionDefer:
+		    return false;
+		}
 	}
 
 	/* manipulate the buffer to replace query */
@@ -150,7 +169,7 @@ bool is_rewrite_enabled(PgSocket *client) {
  *     - disconnect client (if rewrite_query_disconnect_on_failure = true)
  *  - if buffer is not too small, return false and allow main loop to wait for rest of packet
  */
-bool handle_incomplete_packet(PgSocket *client, PktHdr *pkt) {
+IncompletePacketDecision handle_incomplete_packet(PgSocket *client, PktHdr *pkt) {
 	if (incomplete_pkt(pkt)) {
 		slog_warning(client, "Unable to rewrite query - buffer does not contain full query packet");
 		slog_warning(client, "Buffer len -> %d, Pkt len -> %d", mbuf_written(&pkt->data), pkt->len);
@@ -164,10 +183,10 @@ bool handle_incomplete_packet(PgSocket *client, PktHdr *pkt) {
 		} else {
 			/* there is room in the buffer - let's wait for rest of packet */
 			slog_warning(client, "Wait for rest of packet to arrive");
-			return false;
+			return kIncompletePacketDecisionDefer;
 		}
 	}
-	return true;
+	return kIncompletePacketDecisionContinue;
 }
 
 /*
@@ -176,16 +195,16 @@ bool handle_incomplete_packet(PgSocket *client, PktHdr *pkt) {
  * or disconnect client
  * based on rewrite_query_disconnect_on_failure setting
  */
-bool handle_failure(PgSocket *client) {
+IncompletePacketDecision handle_failure(PgSocket *client) {
 	if (strcmp(cf_rewrite_query_disconnect_on_failure, "false") == 0) {
 		/* return true without rewriting query */
 		slog_error(client, "Preserving original query");
-		return true;
+		return kIncompletePacketDecisionDisable;
 	} else {
 		/* disconnect client */
 		slog_error(client, "Disconnecting client");
 		disconnect_client(client, false, "Rewrite Query failure - query too large for buffer - disconnecting");
-		return false;
+		return kIncompletePacketDecisionDefer;
 	}
 }
 
