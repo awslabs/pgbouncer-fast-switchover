@@ -7,7 +7,7 @@ USERLIST="${PGB_DIR}/userlist.txt"
 
 rm -f "${INI}" "${USERLIST}"
 
-if [[ -z "${PGB_DATABASES:-}" ]]; then
+if [[ -z "${PGB_DATABASE1:-}" ]]; then
   echo "Error: no databases specified in \$PGB_DATABASES"
   exit 1
 fi
@@ -19,7 +19,9 @@ fi
 
 cat <<- END > $INI
 [databases]
-    $PGB_DATABASES
+    $PGB_DATABASE1
+    $PGB_DATABASE2
+    $PGB_DATABASE3
 [pgbouncer]
     listen_port = ${PGB_LISTEN_PORT:-5432}
     listen_addr = ${PGB_LISTEN_ADDR:-0.0.0.0}
@@ -53,6 +55,6 @@ done
 
 chmod 0600 $INI
 chmod 0600 $USERLIST
-/pub_metrics.sh &
-/adaptivepgbouncer.sh &
+#/pub_metrics.sh &
+#/adaptivepgbouncer.sh &
 pgbouncer $INI
