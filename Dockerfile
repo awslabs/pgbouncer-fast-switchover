@@ -41,5 +41,6 @@ COPY ./start.sh /start.sh
 COPY ./pub_metrics.sh /pub_metrics.sh
 COPY ./adaptivepgbouncer.sh /adaptivepgbouncer.sh
 
+COPY ./routing_rules.py /home/pgbouncer/
 
 ENTRYPOINT ["/bin/bash", "/start.sh"]

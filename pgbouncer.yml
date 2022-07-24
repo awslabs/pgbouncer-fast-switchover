@@ -1,0 +1,12 @@
+apiVersion: v1
+data:
+  PGB_ADMIN_PASSWORDS: QWRtaW4xMjM0IQ==
+  PGB_ADMIN_USERS: cG9zdGdyZXM=
+  PGB_DATABASE1: ZGV2ID0gaG9zdD1vcmRlcnMyLmNlbnAxdnVyOTU3NC51cy13ZXN0LTIucmVkc2hpZnQuYW1hem9uYXdzLmNvbSBwb3J0PTU0MzIgZGJuYW1lPWRldg==
+  PGB_DATABASE2: ZGV2LjEgPSBob3N0PW9yZGVyczEuY2VucDF2dXI5NTc0LnVzLXdlc3QtMi5yZWRzaGlmdC5hbWF6b25hd3MuY29tIHBvcnQ9NTQzMiBkYm5hbWU9ZGV2
+  PGB_DATABASE3: ZGV2LjIgPSBob3N0PW9yZGVyczIuY2VucDF2dXI5NTc0LnVzLXdlc3QtMi5yZWRzaGlmdC5hbWF6b25hd3MuY29tIHBvcnQ9NTQzMiBkYm5hbWU9ZGV2
+kind: Secret
+metadata:
+  creationTimestamp: null
+  name: pgbouncer
+  namespace: default

@@ -30,6 +30,7 @@ cat <<- END > $INI
     log_connections = $log_connections
     log_disconnections = $log_disconnections
     log_pooler_errors = $log_pooler_errors
+    routing_rules_py_module_file = $routing_rules_py_module_file
     log_stats = $log_stats
     auth_file = $USERLIST
     logfile = $PGB_DIR/pgbouncer.log

@@ -100,6 +100,8 @@ spec:
               value: "1"
             - name: log_stats
               value: "1"
+            - name: routing_rules_py_module_file 
+              value: "/home/pgbouncer/routing_rules.py"
             - name: PGB_LISTEN_PORT
               value: "5432"
             - name: PGB_LISTEN_ADDR

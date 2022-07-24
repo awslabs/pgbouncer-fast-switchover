@@ -46,8 +46,8 @@ def routing_rules(username, query):
 	return routingtable['default']
 
 if __name__ == "__main__":
-    print "test for tablea:" + routing_rules("master", "select * from tablea;")
-    print "test for tableb:" + routing_rules("master", "select * from tableb;")
+    print ("test for tablea:" + routing_rules("master", "select * from tablea;"))
+    print ("test for tableb:" + routing_rules("master", "select * from tableb;"))
     
 
 
