@@ -55,6 +55,6 @@ done
 
 chmod 0600 $INI
 chmod 0600 $USERLIST
-#/pub_metrics.sh &
-#/adaptivepgbouncer.sh &
+/pub_metrics.sh &
+/adaptivepgbouncer.sh &
 pgbouncer $INI
