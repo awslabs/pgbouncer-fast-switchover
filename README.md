@@ -181,6 +181,63 @@ But now, when you look in the Redshift console 'Queries' tab, you will see that 
 SELECT prodname, SUM(total) FROM product_sales GROUP BY prodname ORDER BY prodname;
 ```
 
+# Deployment in [Amazon Elastic Kubernetes Service (EKS)](https://aws.amazon.com/eks/)
+We choose to deploy PGBouncer as a container on EKS to allow it to horizontally scale to the Redshift or Postgresql client load. We first containerized and stored the image in [Amazon Elastic Container Registry (ECR)](https://aws.amazon.com/ecr/); then we deployed Kubernetes (1) [Deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/) and (2) [Service](https://kubernetes.io/docs/concepts/services-networking/service/). The Kubernetes Deployment,[pgbouncer-deploy.yaml](./pgbouncer-deploy.yaml) defines the PGBouncer configuration, such as logging or the location of routing rules, as well as Redshift and Postgresql database cluster endpoint credentials. The startup script [start.sh](./start.sh) generates the `pgbouncer.ini` upon the PGBouncer container init (so don't look for it here)
+
+```yaml
+          envFrom:
+            - secretRef:
+               name: pgbouncer
+          env:
+           - name: default_pool_size
+             value: "20"
+           - name: log_connections
+             value: "1"
+           - name: log_disconnections
+             value: "1"
+           - name: log_pooler_errors
+             value: "1"
+           - name: log_stats
+             value: "1"
+           - name: routing_rules_py_module_file
+             value: "/home/pgbouncer/routing_rules.py"
+```
+
+Security wise, we run the PGBouncer process in a non-root user to limit the process scope. 
+
+```dockerfile
+...
+RUN useradd -ms /bin/bash pgbouncer && \
+    chown pgbouncer /home/pgbouncer && \
+    chown pgbouncer /
+
+USER pgbouncer
+WORKDIR /home/pgbouncer
+...
+```
+
+We also use Kubernetes secrets to allow secure credentials loading at runtime only. The secrets are created with [create-secrets.sh](./create-secrets.sh) that issue `kubectl create secret generic` with a local secret file, pgbouncer.secrets. Make sure you avoid loading the file to your git repository by adding `*.secrets` to your `.gitignore`. Here is an example of a secret file:
+
+```yaml
+PGB_DATABASE1=dev = host= <redshift1>port=5432 dbname=dev
+PGB_DATABASE2=dev.1 = host=<redshift1> port=5432 dbname=dev
+PGB_DATABASE3=dev.2 = host=<redshift2> port=5432 dbname=dev
+PGB_ADMIN_USERS=myrsuser
+PGB_ADMIN_PASSWORDS=mym0stsecurepass0wrd
+```
+
+The Kubernetes Service,[pgbouncer-svc.yaml](./pgbouncer-svc.yaml) uses Network Load Balancer that points to the PGBouncer containers deployed in the Kubernetes cluster public subnets. We choose to allow public access to the PGBouncer endpoint for demonstration purposes but we can limit the endpoint to be internal for production systems. Note, you need to deploy the [AWS Load Balancer Controller](https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/) to automate the integration between EKS and NLB. The AWS Load Balancer Controller uses annotations like:
+
+```yaml
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "external"
+    service.beta.kubernetes.io/aws-load-balancer-name: "pgbouncer"
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+```
+
+`aws-load-balancer-scheme:"internet-facing"` exposes the PGBouncer service publicly. `aws-load-balancer-nlb-target-type: "ip"` uses the PGBouncer pods as target rather than the EC2 instance. 
+
 # Getting Started
 
 **Install**  
