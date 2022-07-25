@@ -181,8 +181,8 @@ But now, when you look in the Redshift console 'Queries' tab, you will see that 
 SELECT prodname, SUM(total) FROM product_sales GROUP BY prodname ORDER BY prodname;
 ```
 
-# Deployment in [Amazon Elastic Kubernetes Service (EKS)](https://aws.amazon.com/eks/)
-We choose to deploy PGBouncer as a container on EKS to allow it to horizontally scale to the Redshift or Postgresql client load. We first containerized and stored the image in [Amazon Elastic Container Registry (ECR)](https://aws.amazon.com/ecr/); then we deployed Kubernetes (1) [Deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/) and (2) [Service](https://kubernetes.io/docs/concepts/services-networking/service/). The Kubernetes Deployment,[pgbouncer-deploy.yaml](./pgbouncer-deploy.yaml) defines the PGBouncer configuration, such as logging or the location of routing rules, as well as Redshift and Postgresql database cluster endpoint credentials. The startup script [start.sh](./start.sh) generates the `pgbouncer.ini` upon the PGBouncer container init (so don't look for it here)
+# Deployment in EKS
+We choose to deploy PGBouncer as a container on [Amazon Elastic Kubernetes Service (EKS)](https://aws.amazon.com/eks/) to allow it to horizontally scale to the Redshift or Postgresql client load. We first containerized and stored the image in [Amazon Elastic Container Registry (ECR)](https://aws.amazon.com/ecr/); then we deployed Kubernetes (1) [Deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/) and (2) [Service](https://kubernetes.io/docs/concepts/services-networking/service/). The Kubernetes Deployment,[pgbouncer-deploy.yaml](./pgbouncer-deploy.yaml) defines the PGBouncer configuration, such as logging or the location of routing rules, as well as Redshift and Postgresql database cluster endpoint credentials. The startup script [start.sh](./start.sh) generates the `pgbouncer.ini` upon the PGBouncer container init (so don't look for it here)
 
 ```yaml
           envFrom:
@@ -304,6 +304,40 @@ Example – JDBC driver URL (Redshift driver)
 ```
 jdbc:redshift://pgbouncer-dnshostname:5439/dev
 ```
+**Use EKS**  
+The EKS option automates the installation and configuration sections above. The required steps are:
+
+* [Deploy EKS cluster with Karpenter for automatic EC2 instance horizontal scaling](https://karpenter.sh/v0.13.2/getting-started/getting-started-with-eksctl/)
+
+* [Install the AWS Load Balancer Controller add-on](https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html)
+
+* Build the PGBouncer Docker image.
+
+```bash
+./build.sh
+```
+
+* Deploy PGBouncer replicas 
+
+```bash
+kubectl apply -f pgbouncer-deploy.yaml
+```
+
+* Deploy PGBouncer NLB
+
+```bash
+kubectl apply -f pgbouncer-svc.yaml
+```
+
+* Discover the NLB endpoint
+
+```bash
+kubectl get svc pgbouncer
+NAME        TYPE           CLUSTER-IP      EXTERNAL-IP                                              PORT(S)          AGE
+pgbouncer   LoadBalancer   10.100.190.30   pgbouncer-14d32ab567b83e8f.elb.us-west-2.amazonaws.com   5432:31005/TCP   2d1h
+```
+
+Use the EXTERNAL-IP value, `pgbouncer-14d32ab567b83e8f.elb.us-west-2.amazonaws.com` as the endpoint to connect the database
    
 # Other uses for pgbouncer-rr
 
