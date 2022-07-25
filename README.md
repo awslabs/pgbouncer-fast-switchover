@@ -304,7 +304,7 @@ Example – JDBC driver URL (Redshift driver)
 ```
 jdbc:redshift://pgbouncer-dnshostname:5439/dev
 ```
-**Use EKS**  
+## Use EKS  
 The EKS option automates the installation and configuration sections above. The required steps are:
 
 * [Deploy EKS cluster with Karpenter for automatic EC2 instance horizontal scaling](https://karpenter.sh/v0.13.2/getting-started/getting-started-with-eksctl/)
