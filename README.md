@@ -1,4 +1,4 @@
-# Query Routing and Rewrite: Introducing pgbouncer-rr for Amazon Redshift and PostgreSQL
+
 
 Have you ever wanted to split your database load across multiple servers or clusters without impacting the configuration or code of your client applications? Or perhaps you have wished for a way to intercept and modify application queries, so that you can make them use optimized tables (sorted, pre-joined, pre-aggregated, etc.), add security filters, or hide changes you have made in the schema?  
 
@@ -375,6 +375,34 @@ Viewing the container's stdout and stderr is preferred if the pgbouncer process 
 * View the logs in CloudWatch. 
 To stream container logs running in Amazon Elastic Kubernetes Service (Amazon EKS) to a logging system like CloudWatch Logs follow https://aws.amazon.com/premiumsupport/knowledge-center/cloudwatch-stream-container-logs-eks/ 
    
+### How to make configuration changes?
+You must push changes to EKS if you need to modify the pgbouncer configuration or binaries. Changing configurations is done using the kubectl tool, but updating binaries requires rebuilding the docker image and pushing it to the image registry (ECR). Below we describe both methods.
+
+* Making configuration changes
+The pgbouncer-rr config is stored in [pgbouncer-deploy.yaml](./pgbouncer-deploy.yaml) or [pgbouncer-svc.yaml](./pgbouncer-svc.yaml). Say we wanted to increase the [default_pool_size](https://www.pgbouncer.org/config.html). You need to modify `default_pool_size` in [pgbouncer-deploy.yaml](./pgbouncer-deploy.yaml) and execute:
+
+```bash
+kubectl apply -f ./pgbouncer-deploy.yaml
+```
+* Making binaries changes
+The pgbouncer-rr docker specification is stored in [Dockerfile](./Dockerfile). Say you want to upgrade the pgbouncer version from 1.15 to 1.16. You need to modify `--branch "pgbouncer_1_15_0"`. Instead of:
+
+```dockerfile
+RUN git clone https://github.com/pgbouncer/pgbouncer.git --branch "pgbouncer_1_15_0" && \
+```
+use
+
+```dockerfile 
+RUN git clone https://github.com/pgbouncer/pgbouncer.git --branch "pgbouncer_1_16_0" && \
+```
+
+Then you rebuild and push the changes to the docker image registry and rollout the changes in Kubernetes
+
+```bash
+./build.sh
+kubectl rollout restart deploy pgbouncer
+```
+
 # Other uses for pgbouncer-rr
 
 It can be used for lots of things, really. In addition to the examples shown above, here are some other use cases suggested by colleagues:  
