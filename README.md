@@ -305,7 +305,10 @@ The Kubernetes Service,[pgbouncer-svc.yaml](./pgbouncer-svc.yaml) uses Network L
 ```
 
 `aws-load-balancer-scheme:"internet-facing"` exposes the PGBouncer service publicly. `aws-load-balancer-nlb-target-type: "ip"` uses the PGBouncer pods as target rather than the EC2 instance. 
-The EKS option automates the installation and configuration sections above. The required steps are:
+
+
+### Deployment steps
+The EKS option automates the configuration and installation sections above. The deployment steps with EKS are:
 
 * [Deploy EKS cluster with Karpenter for automatic EC2 instance horizontal scaling](https://karpenter.sh/v0.13.2/getting-started/getting-started-with-eksctl/)
 
@@ -338,6 +341,39 @@ pgbouncer   LoadBalancer   10.100.190.30   pgbouncer-14d32ab567b83e8f.elb.us-wes
 ```
 
 Use the EXTERNAL-IP value, `pgbouncer-14d32ab567b83e8f.elb.us-west-2.amazonaws.com` as the endpoint to connect the database
+
+### How to view the pgbouncer-rr logs?
+
+Pgbouncer default logging writes the process logs to stdout and stderr as well as a preconfigured log file. One can view the log in three ways:
+* [Get a shell to the pgbouncer running container and view the log](https://kubernetes.io/docs/tasks/debug/debug-application/get-shell-running-container/)
+Discover the pgbouncer process by:
+
+```bash
+[pgbouncer-rr-patch]$kubectl get po 
+NAME                           READY   STATUS    RESTARTS   AGE
+appload-6cb95bb44b-s6kgb       1/1     Running   0          41h
+appselect-7678cc87b6-cdfq9     1/1     Running   0          41h
+fluentbit-976pf                1/1     Running   0          3d2h
+fluentbit-b8st4                1/1     Running   0          191d
+pgbouncer-5dc7498984-f6js2     1/1     Running   0          41h
+```
+
+Use the `pgbouncer-5dc7498984-f6js2` for getting the container shell
+
+```bash
+[pgbouncer-rr-patch]$kubectl exec -it pgbouncer-5dc7498984-f6js2 -- /bin/bash
+[pgbouncer@pgbouncer-5dc7498984-f6js2 ~]$ vi pgbouncer.log
+```
+
+* Get the container stdout and stderr. 
+Viewing the container's stdout and stderr is preferred if the pgbouncer process is the only one running. 
+
+```bash
+[pgbouncer-rr-patch]$kubectl logs pgbouncer-5dc7498984-f6js2
+```
+
+* View the logs in CloudWatch. 
+To stream container logs running in Amazon Elastic Kubernetes Service (Amazon EKS) to a logging system like CloudWatch Logs follow https://aws.amazon.com/premiumsupport/knowledge-center/cloudwatch-stream-container-logs-eks/ 
    
 # Other uses for pgbouncer-rr
 
