@@ -1,4 +1,4 @@
-# Query Routing and Rewrite: Introducing pgbouncer-rr for Amazon Redshift and PostgreSQL
+
 
 Have you ever wanted to split your database load across multiple servers or clusters without impacting the configuration or code of your client applications? Or perhaps you have wished for a way to intercept and modify application queries, so that you can make them use optimized tables (sorted, pre-joined, pre-aggregated, etc.), add security filters, or hide changes you have made in the schema?  
 
@@ -247,7 +247,162 @@ Example – JDBC driver URL (Redshift driver)
 ```
 jdbc:redshift://pgbouncer-dnshostname:5439/dev
 ```
+## Deploy pgbouncer in Elastic Kubernetes Service (EKS)  
+
+### Dockerization and deployment considerations
+We choose to deploy PGBouncer as a container on [Amazon Elastic Kubernetes Service (EKS)](https://aws.amazon.com/eks/) to allow it to horizontally scale to the Redshift or Postgresql client load. We first containerized and stored the image in [Amazon Elastic Container Registry (ECR)](https://aws.amazon.com/ecr/); then we deployed Kubernetes (1) [Deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/) and (2) [Service](https://kubernetes.io/docs/concepts/services-networking/service/). The Kubernetes Deployment,[pgbouncer-deploy.yaml](./pgbouncer-deploy.yaml) defines the PGBouncer configuration, such as logging or the location of routing rules, as well as Redshift and Postgresql database cluster endpoint credentials. The startup script [start.sh](./start.sh) generates the `pgbouncer.ini` upon the PGBouncer container init (so don't look for it here)
+
+```yaml
+          envFrom:
+            - secretRef:
+               name: pgbouncer
+          env:
+           - name: default_pool_size
+             value: "20"
+           - name: log_connections
+             value: "1"
+           - name: log_disconnections
+             value: "1"
+           - name: log_pooler_errors
+             value: "1"
+           - name: log_stats
+             value: "1"
+           - name: routing_rules_py_module_file
+             value: "/home/pgbouncer/routing_rules.py"
+```
+
+Security wise, we run the PGBouncer process in a non-root user to limit the process scope. 
+
+```dockerfile
+...
+RUN useradd -ms /bin/bash pgbouncer && \
+    chown pgbouncer /home/pgbouncer && \
+    chown pgbouncer /
+
+USER pgbouncer
+WORKDIR /home/pgbouncer
+...
+```
+
+We also use Kubernetes secrets to allow secure credentials loading at runtime only. The secrets are created with [create-secrets.sh](./create-secrets.sh) that issue `kubectl create secret generic` with a local secret file, pgbouncer.secrets. Make sure you avoid loading the file to your git repository by adding `*.secrets` to your `.gitignore`. Here is an example of a secret file:
+
+```yaml
+PGB_DATABASE1=dev = host= <redshift1>port=5432 dbname=dev
+PGB_DATABASE2=dev.1 = host=<redshift1> port=5432 dbname=dev
+PGB_DATABASE3=dev.2 = host=<redshift2> port=5432 dbname=dev
+PGB_ADMIN_USERS=myrsuser
+PGB_ADMIN_PASSWORDS=mym0stsecurepass0wrd
+```
+
+The Kubernetes Service,[pgbouncer-svc.yaml](./pgbouncer-svc.yaml) uses Network Load Balancer that points to the PGBouncer containers deployed in the Kubernetes cluster public subnets. We choose to allow public access to the PGBouncer endpoint for demonstration purposes but we can limit the endpoint to be internal for production systems. Note, you need to deploy the [AWS Load Balancer Controller](https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/) to automate the integration between EKS and NLB. The AWS Load Balancer Controller uses annotations like:
+
+```yaml
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "external"
+    service.beta.kubernetes.io/aws-load-balancer-name: "pgbouncer"
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+```
+
+`aws-load-balancer-scheme:"internet-facing"` exposes the PGBouncer service publicly. `aws-load-balancer-nlb-target-type: "ip"` uses the PGBouncer pods as target rather than the EC2 instance. 
+
+
+### Deployment steps
+The EKS option automates the configuration and installation sections above. The deployment steps with EKS are:
+
+* [Deploy EKS cluster with Karpenter for automatic EC2 instance horizontal scaling](https://karpenter.sh/v0.13.2/getting-started/getting-started-with-eksctl/)
+
+* [Install the AWS Load Balancer Controller add-on](https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html)
+
+* Build the PGBouncer Docker image.
+
+```bash
+./build.sh
+```
+
+* Deploy PGBouncer replicas 
+
+```bash
+kubectl apply -f pgbouncer-deploy.yaml
+```
+
+* Deploy PGBouncer NLB
+
+```bash
+kubectl apply -f pgbouncer-svc.yaml
+```
+
+* Discover the NLB endpoint
+
+```bash
+kubectl get svc pgbouncer
+NAME        TYPE           CLUSTER-IP      EXTERNAL-IP                                              PORT(S)          AGE
+pgbouncer   LoadBalancer   10.100.190.30   pgbouncer-14d32ab567b83e8f.elb.us-west-2.amazonaws.com   5432:31005/TCP   2d1h
+```
+
+Use the EXTERNAL-IP value, `pgbouncer-14d32ab567b83e8f.elb.us-west-2.amazonaws.com` as the endpoint to connect the database
+
+### How to view the pgbouncer-rr logs?
+
+Pgbouncer default logging writes the process logs to stdout and stderr as well as a preconfigured log file. One can view the log in three ways:
+* [Get a shell to the pgbouncer running container and view the log](https://kubernetes.io/docs/tasks/debug/debug-application/get-shell-running-container/)
+Discover the pgbouncer process by:
+
+```bash
+[pgbouncer-rr-patch]$kubectl get po 
+NAME                           READY   STATUS    RESTARTS   AGE
+appload-6cb95bb44b-s6kgb       1/1     Running   0          41h
+appselect-7678cc87b6-cdfq9     1/1     Running   0          41h
+fluentbit-976pf                1/1     Running   0          3d2h
+fluentbit-b8st4                1/1     Running   0          191d
+pgbouncer-5dc7498984-f6js2     1/1     Running   0          41h
+```
+
+Use the `pgbouncer-5dc7498984-f6js2` for getting the container shell
+
+```bash
+[pgbouncer-rr-patch]$kubectl exec -it pgbouncer-5dc7498984-f6js2 -- /bin/bash
+[pgbouncer@pgbouncer-5dc7498984-f6js2 ~]$ vi pgbouncer.log
+```
+
+* Get the container stdout and stderr. 
+Viewing the container's stdout and stderr is preferred if the pgbouncer process is the only one running. 
+
+```bash
+[pgbouncer-rr-patch]$kubectl logs pgbouncer-5dc7498984-f6js2
+```
+
+* View the logs in CloudWatch. 
+To stream container logs running in Amazon Elastic Kubernetes Service (Amazon EKS) to a logging system like CloudWatch Logs follow https://aws.amazon.com/premiumsupport/knowledge-center/cloudwatch-stream-container-logs-eks/ 
    
+### How to make configuration changes?
+You must push changes to EKS if you need to modify the pgbouncer configuration or binaries. Changing configurations is done using the kubectl tool, but updating binaries requires rebuilding the docker image and pushing it to the image registry (ECR). Below we describe both methods.
+
+* Making configuration changes
+The pgbouncer-rr config is stored in [pgbouncer-deploy.yaml](./pgbouncer-deploy.yaml) or [pgbouncer-svc.yaml](./pgbouncer-svc.yaml). Say we wanted to increase the [default_pool_size](https://www.pgbouncer.org/config.html). You need to modify `default_pool_size` in [pgbouncer-deploy.yaml](./pgbouncer-deploy.yaml) and execute:
+
+```bash
+kubectl apply -f ./pgbouncer-deploy.yaml
+```
+* Making binaries changes
+The pgbouncer-rr docker specification is stored in [Dockerfile](./Dockerfile). Say you want to upgrade the pgbouncer version from 1.15 to 1.16. You need to modify `--branch "pgbouncer_1_15_0"`. Instead of:
+
+```dockerfile
+RUN git clone https://github.com/pgbouncer/pgbouncer.git --branch "pgbouncer_1_15_0" && \
+```
+use
+
+```dockerfile 
+RUN git clone https://github.com/pgbouncer/pgbouncer.git --branch "pgbouncer_1_16_0" && \
+```
+
+Then you rebuild and push the changes to the docker image registry and rollout the changes in Kubernetes
+
+```bash
+./build.sh
+kubectl rollout restart deploy pgbouncer
+```
+
 # Other uses for pgbouncer-rr
 
 It can be used for lots of things, really. In addition to the examples shown above, here are some other use cases suggested by colleagues:  
