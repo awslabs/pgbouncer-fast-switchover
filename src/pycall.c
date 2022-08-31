@@ -21,10 +21,12 @@ This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS O
 char *pycall(PgSocket *client, char *username, char *query_str, char *py_file,
 		char* py_function) {
 	PyObject *pName = NULL, *pModule = NULL, *pFunc = NULL;
-	PyObject *pArgs = NULL, *pValue = NULL;
+	PyObject *pArgs = NULL, *pValue = NULL, *pArgsCnt = NULL, *pCode = NULL;
 	PyObject *ptype, *perror, *ptraceback, *bytes_obj, *string_obj;
 	char *py_pathtmp, *py_filetmp, *py_path, *py_module, *ext;
 	char *res = NULL;
+	int agCount = 0;
+	const char *dbname = NULL;
 
         /* setup python search path */
 	py_pathtmp = strdup(py_file);
@@ -89,8 +91,31 @@ char *pycall(PgSocket *client, char *username, char *query_str, char *py_file,
 		goto finish;
 	}
 
-	/* Call function with two arguments - username and query_str */
-	pArgs = PyTuple_New(2);
+#if PY_MAJOR_VERSION >= 3
+	pCode = PyObject_GetAttrString(pFunc, "__code__");
+#else
+	pCode = PyObject_GetAttrString(pFunc, "code");
+#endif
+	if (pCode) {
+		/* get the number of arguments */
+		pArgsCnt = PyObject_GetAttrString(pCode, "co_argcount");
+	
+		if (pArgsCnt == NULL) {
+			slog_error(client, "Could not obtain arg count of Python Function <%s>", 
+					py_function);
+			goto finish;
+		}
+
+		agCount = PyLong_AsLong(pArgsCnt);
+		dbname = client->db->dbname;
+		Py_DECREF(pArgsCnt);
+		Py_DECREF(pCode);
+	} else {
+		agCount = 2;
+	}
+
+	/* Call function with two arguments - username, query_str and optionally with dbname */
+	pArgs = PyTuple_New(agCount);
 	if (pArgs == NULL) {
 		slog_error(client, "Python module <%s>: out of memory", py_module);
 		goto finish;
@@ -107,6 +132,16 @@ char *pycall(PgSocket *client, char *username, char *query_str, char *py_file,
 		goto finish;
 	}
 	PyTuple_SetItem(pArgs, 1, pValue);
+
+	/* If there is a dbname argument, add it to the tuple */
+	if (agCount == 3) {
+        pValue = PyUnicode_FromString(dbname);
+		PyTuple_SetItem(pArgs, 2, pValue);
+		if (pValue == NULL) {
+			slog_error(client, "Python module <%s>: out of memory", py_module);
+			goto finish;
+		}
+    }
 	pValue = PyObject_CallObject(pFunc, pArgs);
 	if (pValue == NULL) {
 		slog_error(client, "Python Function <%s> failed to return a value",
