@@ -33,7 +33,9 @@ The Python routing function is dynamically loaded by pgbouncer-rr, from the file
 
 The file should contain the following Python function:    
 `def routing_rules(username, query):`  
-- The function parameters will provide the username associated with the client, and a query string.
+- The function parameters will provide the username associated with the client, and a query string
+- The function may take optonally a database key name parameter:
+  - In this case the file should contain the following Python function: `def routing_rules(username, query, db_key):` the db_key argument will be the name of the database key used for the query.
 - The function return value must be a valid database key name (dbkey) as specified in the configuration file, or `None`:
   - When a valid dbkey is returned by the routing function, the client connection will be routed to a connection in the specified server connection pool. 
   - When `None` is returned by the routing function, the client remains routed to its current server connection.   
