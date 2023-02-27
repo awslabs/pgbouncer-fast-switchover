@@ -20,14 +20,14 @@ This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS O
 #include <usual/pgutil.h>
 
 /* private function prototypes */
-char *call_python_routing_rules(PgSocket *client, char *query_str);
+char *call_python_routing_rules(PgSocket *client, char *query_str, int in_transaction);
 
 /* route_client_connection:
  *  - applied to packets of type 'Q' (Query) and 'P' (Prepare) only
  *  - apply routing rules to query string contained in the buffer, and determine target database
  *  - locate connection pool for target database to client object, and return
  */
-bool route_client_connection(PgSocket *client, PktHdr *pkt) {
+bool route_client_connection(PgSocket *client, int in_transaction, PktHdr *pkt) {
 	SBuf *sbuf = &client->sbuf;
 	char *pkt_start;
 	char *query_str;
@@ -66,7 +66,7 @@ bool route_client_connection(PgSocket *client, PktHdr *pkt) {
 		return true;
 	}
 
-	dbname = pycall(client, client->login_user->name, query_str, cf_routing_rules_py_module_file,
+	dbname = pycall(client, client->login_user->name, query_str, in_transaction, cf_routing_rules_py_module_file,
 			"routing_rules");
 	if (dbname == NULL) {
 		slog_debug(client, "routing_rules returned 'None' - existing connection preserved");
@@ -76,7 +76,7 @@ bool route_client_connection(PgSocket *client, PktHdr *pkt) {
 	db = find_database(dbname);
 	if (db == NULL) {
 		slog_error(client,
-				"nonexistant database key <%s> returned by routing_rules",
+				"nonexistent database key <%s> returned by routing_rules",
 				dbname);
 		slog_error(client, "check ini and/or routing rules function");
 		free(dbname);
