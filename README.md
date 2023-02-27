@@ -32,8 +32,8 @@ The Python routing function is dynamically loaded by pgbouncer-rr, from the file
 `routing_rules_py_module_file = /etc/pgbouncer-rr/routing_rules.py`
 
 The file should contain the following Python function:    
-`def routing_rules(username, query):`  
-- The function parameters will provide the username associated with the client, and a query string.
+`def routing_rules(username, query, in_transaction):`  
+- The function parameters will provide the username associated with the client, a query string, and the value indicating whether there is an ongoing transaction.
 - The function return value must be a valid database key name (dbkey) as specified in the configuration file, or `None`:
   - When a valid dbkey is returned by the routing function, the client connection will be routed to a connection in the specified server connection pool. 
   - When `None` is returned by the routing function, the client remains routed to its current server connection.   
@@ -62,7 +62,7 @@ Ensure the configuration file setting `routing_rules_py_module_file` specifies t
  
 The code in the file could look like the following:
 ```
-def routing_rules(username, query):
+def routing_rules(username, query, in_transaction):
 	if "tablea" in query:
 		return "dev.1"
 	elif "tableb" in query:
@@ -98,7 +98,7 @@ routingtable = {
 # IMPLEMENTS REGEX RULES DEFINED IN ROUTINGTABLE OBJECT
 # RETURNS FIRST MATCH FOUND
 import re
-def routing_rules(username, query):
+def routing_rules(username, query, in_transaction):
 	for route in routingtable['route']:
 		u = re.compile(route['usernameRegex'])
 		q = re.compile(route['queryRegex'])
@@ -123,8 +123,8 @@ The rewrite function is also implemented in a fully configurable python function
 `rewrite_query_py_module_file = /etc/pgbouncer-rr/rewrite_query.py`
 
 The file should contain the python function:    
-`def rewrite_query(username, query):`  
-- The function parameters will provide the username associated with the client, and a query string.
+`def rewrite_query(username, query, in_transaction):`  
+- The function parameters will provide the username associated with the client, a query string, and the value indicating whether there is an ongoing transaction.
 - The function return value must be a valid SQL query string which will return the result set you want the client application to receive. 
   
 Implementing a query rewrite function is straightforward when the incoming application queries have fixed formats that are easily detectable and easily manipulated, perhaps using regular expression search/replace logic in the Python function. It is much more challenging to build a robust rewrite function to handle SQL statements with arbitrary format and complexity.  
@@ -156,7 +156,7 @@ Ensure the configuration file setting `rewrite_query_py_module_file` specifies t
 The code in the file could look like this:
 ```
 import re
-def rewrite_query(username, query):
+def rewrite_query(username, query, in_transaction):
     q1="SELECT storename, SUM\(total\) FROM sales JOIN store USING \(storeid\) GROUP BY storename ORDER BY storename"
     q2="SELECT prodname, SUM\(total\) FROM sales JOIN product USING \(productid\) GROUP BY prodname ORDER BY prodname"
     if re.match(q1, query):
