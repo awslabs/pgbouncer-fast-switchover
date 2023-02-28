@@ -88,7 +88,7 @@ char *pycall(PgSocket *client, char *username, char *query_str, int in_transacti
 		goto finish;
 	}
 	PyTuple_SetItem(pArgs, 0, pValue);
-	pValue = PyUnicode_FromString(query_str);
+	pValue = PyUnicode_DecodeUTF8(query_str, strlen(query_str), "ignore");
 	if (pValue == NULL) {
 		slog_error(client, "Python module <%s>: out of memory", py_module);
 		goto finish;
