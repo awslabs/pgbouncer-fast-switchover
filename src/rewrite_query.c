@@ -25,7 +25,7 @@ typedef enum {
 } IncompletePacketDecision;
 
 /* private function prototypes */
-char *call_python_rewrite_query(PgSocket *client, char *query_str);
+char *call_python_rewrite_query(PgSocket *client, char *query_str, int in_transaction);
 void printHex(void *buffer, const unsigned int n);
 char *strip_newlines(char *s);
 bool is_rewrite_enabled(PgSocket *client);
@@ -37,7 +37,7 @@ bool is_rewritten(char *query);
 /* rewrite_query:
  * applied to packets of type 'Q' (Query) and 'P' (Prepare) only
  */
-bool rewrite_query(PgSocket *client, PktHdr *pkt) {
+bool rewrite_query(PgSocket *client, int in_transaction, PktHdr *pkt) {
 	SBuf *sbuf = &client->sbuf;
 	char *pkt_start;
 	char *stmt_str="", *query_str, *loggable_query_str, *tmp_new_query_str, *new_query_str;
@@ -78,13 +78,15 @@ bool rewrite_query(PgSocket *client, PktHdr *pkt) {
 	/* don't process same query again */
 	if (is_rewritten(query_str)) return true;
 
-	loggable_query_str = strip_newlines(query_str) ;
-	slog_debug(client, "rewrite_query: Username => %s", client->login_user->name);
-	slog_debug(client, "rewrite_query: Orig Query=> %s", loggable_query_str);
-	free(loggable_query_str);
+    if (unlikely(cf_verbose > 0)) {
+	    loggable_query_str = strip_newlines(query_str) ;
+	    slog_debug(client, "rewrite_query: Username => %s", client->login_user->name);
+	    slog_debug(client, "rewrite_query: Orig Query=> %s", loggable_query_str);
+	    free(loggable_query_str);
+	}
 
 	/* call python function to rewrite the query */
-	tmp_new_query_str = pycall(client, client->login_user->name, query_str, cf_rewrite_query_py_module_file,
+	tmp_new_query_str = pycall(client, client->login_user->name, query_str, in_transaction, cf_rewrite_query_py_module_file,
 			"rewrite_query");
 	if (tmp_new_query_str == NULL) {
 		slog_debug(client, "query unchanged");
@@ -225,19 +227,32 @@ char *strip_newlines(char *s) {
 	return n;
 }
 
+#define rewritten_template "rewritten_pid='%05d'*/"
+
 /* query tagging to prevent multiple rewrite */
 char *tag_rewritten(char *query) {
 	char *tag = malloc(64);
-	char *taggedQuery ;
+	char *taggedQuery;
+	int len, offset;
 	if (tag == NULL) {
 		fatal_perror("malloc");
 	}
-	sprintf(tag,"/* rewritten: pid=%05d */ ", getpid());
-	taggedQuery = malloc(strlen(tag)+strlen(query)+1);
+    len = strlen(query);
+    if (len > 2 && query[len - 2] == '*' && query[len - 1] == '/') {
+	  tag[0] = ',';
+	  offset = 1;
+	} else {
+	  tag[0] = '/';
+	  tag[1] = '*';
+	  offset = 2;
+	}
+	sprintf(tag + offset, rewritten_template, getpid());
+	taggedQuery = malloc(strlen(tag) + strlen(query) + 1);
 	if (taggedQuery == NULL) {
 		fatal_perror("malloc");
 	}
-	sprintf(taggedQuery, "%s%s", tag, query);
+	strcpy(taggedQuery, query);
+	strcpy(taggedQuery + len - (2 - offset) * 2, tag);
 	free(tag);
 	return taggedQuery;
 }
@@ -247,8 +262,8 @@ bool is_rewritten(char *query) {
 	if (tag == NULL) {
 		fatal_perror("malloc");
 	}
-	sprintf(tag,"/* rewritten: pid=%05d */ ", getpid());
-	if (strstr(query,tag) == query){
+	sprintf(tag, rewritten_template, getpid());
+	if (strstr(query + strlen(query) - strlen(tag), tag) == query){
 		is_tagged = true;
 	}
 	free(tag);

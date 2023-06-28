@@ -1,9 +1,6 @@
 --- ../pgbouncer/src/client.c	2020-04-26 15:20:51.660323326 -0400
 +++ ./src/client.c	2020-04-26 15:19:04.085959392 -0400
-@@ -480,16 +480,16 @@ static bool decide_startup_pool(PgSocket
- 		} else if (strcmp(key, "user") == 0) {
- 			slog_debug(client, "got var: %s=%s", key, val);
- 			username = val;
+@@ -545,10 +545,10 @@ static bool decide_startup_pool(PgSocket *client, PktHdr *pkt)
  		} else if (strcmp(key, "application_name") == 0) {
  			set_appname(client, val);
  			appname_found = true;
@@ -16,27 +13,40 @@
  		} else {
  			slog_warning(client, "unsupported startup parameter: %s=%s", key, val);
  			disconnect_client(client, true, "unsupported startup parameter: %s", key);
- 			return false;
- 		}
- 	}
-@@ -861,12 +861,20 @@ static bool handle_client_work(PgSocket
- 		client->xact_start = client->query_start;
+@@ -883,7 +883,7 @@ static bool handle_client_startup(PgSocket *client, PktHdr *pkt)
+ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
+ {
+ 	SBuf *sbuf = &client->sbuf;
+-	int rfq_delta = 0;
++	int rfq_delta = 0, in_transaction;
+ 
+ 	switch (pkt->type) {
+ 
+@@ -940,8 +940,11 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
+ 		client->query_start = get_cached_time();
  	}
  
++	/* xact_start is non-zero if we are inside a transaction */
++	in_transaction = client->xact_start != 0;
++
+ 	/* remember timestamp of the first query in a transaction */
+-	if (!client->xact_start) {
++	if (!in_transaction) {
+ 		client->pool->stats.xact_count++;
+ 		client->xact_start = client->query_start;
+ 	}
+@@ -949,6 +952,14 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
  	if (client->pool->db->admin)
  		return admin_handle_client(client, pkt);
  
-+        /* pgbouncer-rr extensions: query rewrite & client connection routing */
-+        if (pkt->type == 'Q' || pkt->type == 'P') {
-+                if (!rewrite_query(client, pkt)) {
-+                        return false;
-+                }
-+                route_client_connection(client, pkt);
-+        }
++	/* pgbouncer-rr extensions: query rewrite & client connection routing */
++	if (pkt->type == 'Q' || pkt->type == 'P') {
++		if (!rewrite_query(client, in_transaction, pkt)) {
++			return false;
++		}
++		route_client_connection(client, in_transaction, pkt);
++	}
 +
  	/* acquire server */
  	if (!find_server(client))
  		return false;
- 
- 	/* postpone rfq change until certain that client will not be paused */
- 	if (rfq_delta) {

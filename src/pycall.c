@@ -18,51 +18,38 @@ This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS O
 #include "bouncer.h"
 #include <usual/pgutil.h>
 
-char *pycall(PgSocket *client, char *username, char *query_str, char *py_file,
-		char* py_function) {
+char *pycall(PgSocket *client, char *username, char *query_str, int in_transaction,
+        char *py_file, char* py_function) {
 	PyObject *pName = NULL, *pModule = NULL, *pFunc = NULL;
-	PyObject *pArgs = NULL, *pValue = NULL, *pArgsCnt = NULL, *pCode = NULL;
-	PyObject *ptype, *perror, *ptraceback, *bytes_obj, *string_obj;
-	char *py_pathtmp, *py_filetmp, *py_path, *py_module, *ext;
+	PyObject *pArgs = NULL, *pValue = NULL;
+	PyObject *ptype, *perror, *ptraceback, *bytes_obj, *string_obj, *objInTransaction;
+	char *py_file_copy, *py_module, *ext;
 	char *res = NULL;
 	int agCount = 0;
 	const char *dbname = NULL;
 
-        /* setup python search path */
-	py_pathtmp = strdup(py_file);
-	if (py_pathtmp == NULL) {
+	/* setup python search path */
+	py_file_copy = strdup(py_file);
+	if (py_file_copy == NULL) {
 		slog_error(client, "out of memory");
 		return NULL;
 	}
-	py_path = malloc(strlen(py_file) + 20) ;
-	if (py_path == NULL) {
-		slog_error(client, "out of memory");
-		free(py_pathtmp);
-		return NULL;
-	}
-        sprintf(py_path,"PYTHONPATH=%s",dirname(py_pathtmp)) ;
-	putenv(py_path) ;
+	setenv("PYTHONPATH", dirname(py_file_copy), 1);
 
 	/* setup python module name, function name */
-	py_filetmp = strdup(py_file);
-	if (py_filetmp == NULL) {
-		slog_error(client, "out of memory");
-		free(py_pathtmp);
-		free(py_path);
-		return NULL;
-	}
-	py_module = (char *) basename(py_filetmp);
+	strcpy(py_file_copy, py_file);
+	py_module = (char *) basename(py_file_copy);
 	ext = strrchr(py_module, '.');
 	if (ext)
 		ext[0] = '\0';
 
-        /* Initialize the Python interpreter
-         * NOTE: This call is a no-op on subsequent calls, as we do not 
-         * call PyFinalize(). This 
-         * a) avoids the overhead of repeatedly reloading the interpreter
-         * b) allows the use of global variables for persisting data in the
-         *    routing / rewriting functions between calls.
-         */
+	/* Initialize the Python interpreter
+	 * NOTE: This call is a no-op on subsequent calls, as we do not 
+	 * call PyFinalize(). This 
+	 * a) avoids the overhead of repeatedly reloading the interpreter
+	 * b) allows the use of global variables for persisting data in the
+	 *    routing / rewriting functions between calls.
+	 */
 	Py_Initialize();
 
 	/* Load python module */
@@ -91,31 +78,8 @@ char *pycall(PgSocket *client, char *username, char *query_str, char *py_file,
 		goto finish;
 	}
 
-#if PY_MAJOR_VERSION >= 3
-	pCode = PyObject_GetAttrString(pFunc, "__code__");
-#else
-	pCode = PyObject_GetAttrString(pFunc, "code");
-#endif
-	if (pCode) {
-		/* get the number of arguments */
-		pArgsCnt = PyObject_GetAttrString(pCode, "co_argcount");
-	
-		if (pArgsCnt == NULL) {
-			slog_error(client, "Could not obtain arg count of Python Function <%s>", 
-					py_function);
-			goto finish;
-		}
-
-		agCount = PyLong_AsLong(pArgsCnt);
-		dbname = client->db->dbname;
-		Py_DECREF(pArgsCnt);
-		Py_DECREF(pCode);
-	} else {
-		agCount = 2;
-	}
-
-	/* Call function with two arguments - username, query_str and optionally with dbname */
-	pArgs = PyTuple_New(agCount);
+	/* Call function with two arguments - username and query_str */
+	pArgs = PyTuple_New(3);
 	if (pArgs == NULL) {
 		slog_error(client, "Python module <%s>: out of memory", py_module);
 		goto finish;
@@ -126,7 +90,7 @@ char *pycall(PgSocket *client, char *username, char *query_str, char *py_file,
 		goto finish;
 	}
 	PyTuple_SetItem(pArgs, 0, pValue);
-	pValue = PyUnicode_FromString(query_str);
+	pValue = PyUnicode_DecodeUTF8(query_str, strlen(query_str), "ignore");
 	if (pValue == NULL) {
 		slog_error(client, "Python module <%s>: out of memory", py_module);
 		goto finish;
@@ -142,6 +106,9 @@ char *pycall(PgSocket *client, char *username, char *query_str, char *py_file,
 			goto finish;
 		}
     }
+	objInTransaction = in_transaction? Py_True : Py_False;
+	Py_INCREF(objInTransaction);
+	PyTuple_SetItem(pArgs, 2, objInTransaction);
 	pValue = PyObject_CallObject(pFunc, pArgs);
 	if (pValue == NULL) {
 		slog_error(client, "Python Function <%s> failed to return a value",
@@ -164,11 +131,8 @@ char *pycall(PgSocket *client, char *username, char *query_str, char *py_file,
             bytes_obj = PyUnicode_AsUTF8String(string_obj);
             slog_error(client, "Python error: %s", PyBytes_AsString(bytes_obj));
             Py_DECREF(string_obj);
-            Py_DECREF(bytes_obj);
     }
-	free(py_pathtmp);
-	free(py_filetmp);
-	free(py_path);
+	free(py_file_copy);
 	Py_XDECREF(pName);
 	Py_XDECREF(pModule);
 	Py_XDECREF(pFunc);
