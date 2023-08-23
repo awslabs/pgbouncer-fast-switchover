@@ -7,9 +7,9 @@
  	src/server.c \
  	src/stats.c \
  	src/system.c \
-+        src/pycall.c \
-+        src/route_connection.c \
-+        src/rewrite_query.c \
++   src/pycall.c \
++   src/route_connection.c \
++   src/rewrite_query.c \
  	src/takeover.c \
  	src/util.c \
  	src/varcache.c \
@@ -23,9 +23,9 @@
  	include/server.h \
  	include/stats.h \
  	include/system.h \
-+        include/pycall.h \
-+        include/route_connection.h \
-+        include/rewrite_query.h \
++   include/pycall.h \
++   include/route_connection.h \
++   include/rewrite_query.h \
  	include/takeover.h \
  	include/util.h \
  	include/varcache.h \

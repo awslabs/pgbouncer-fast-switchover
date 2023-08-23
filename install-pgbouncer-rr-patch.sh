@@ -30,6 +30,7 @@ patchstatus=0
 
 # Patch each modified file
 MERGEFILES="\
+   Makefile\
    src/client.c\
    src/main.c\
    include/bouncer.h\
