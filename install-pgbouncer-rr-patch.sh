@@ -30,6 +30,7 @@ patchstatus=0
 
 # Patch each modified file
 MERGEFILES="\
+   Makefile\
    src/client.c\
    src/main.c\
    include/bouncer.h\
@@ -76,7 +77,7 @@ if [ $patchstatus -eq 1 ]; then
    echo "   pgbouncer-rr-patch already installed in target directory?"
    echo "   new version of pgbouncer with changed source files that can't be patched?"
    echo "      - last tested with pgbouncer v1.12 (April 2020)"
-   echo "      - Try getting pgbouncer with: git clone https://github.com/pgbouncer/pgbouncer.git --branch \"pgbouncer_1_12_0\""
+   echo "      - Try getting pgbouncer with: git clone https://github.com/pgbouncer/pgbouncer.git --branch \"stable-1.19\""
    echo "Status: pgbouncer-rr-patch merge FAILED"
 else
    echo "Status: pgbouncer-rr-patch merge SUCEEDED"
