@@ -1,12 +1,8 @@
-#FROM ubuntu:14.04
-#RUN  apt-get update \
-#  && apt-get install -y wget \
-#  && rm -rf /var/lib/apt/lists/*
 FROM public.ecr.aws/amazonlinux/amazonlinux:2022
 
 RUN yum -y update
-RUN yum install -y wget
-RUN yum install -y tar net-tools curl vim unzip less libevent-devel openssl-devel python-devel libtool git patch make gcc --allowerasing
+RUN yum install -y tar net-tools curl vim unzip less libevent-devel openssl-devel python-devel libtool git patch make gcc wget --allowerasing
+# Install pandoc
 RUN wget https://github.com/jgm/pandoc/releases/download/3.1.6.2/pandoc-3.1.6.2-linux-amd64.tar.gz && \
     tar xvzf ./pandoc-3.1.6.2-linux-amd64.tar.gz --strip-components 1 -C /usr/local
 RUN git clone https://github.com/pgbouncer/pgbouncer.git --branch "stable-1.19" && \
@@ -17,7 +13,7 @@ RUN git clone https://github.com/pgbouncer/pgbouncer.git --branch "stable-1.19" 
     git submodule init && \
     git submodule update && \
     ./autogen.sh && \
-    #ln -s /usr/bin/x86_64-amazon-linux-gnu-pkg-config /usr/bin/x86_64-redhat-linux-gnu-pkg-config && \
+    ln -s /usr/bin/x86_64-amazon-linux-gnu-pkg-config /usr/bin/x86_64-redhat-linux-gnu-pkg-config && \
     ./configure --prefix=/usr/local --exec-prefix=/usr/bin && \
     make && \
     make install
