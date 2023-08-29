@@ -189,7 +189,7 @@ Download and install pgbouncer-rr by running the following commands (Amazon Linu
 # install required packages - see https://github.com/pgbouncer/pgbouncer#building
 sudo yum install libevent-devel openssl-devel python-devel libtool git patch make -y
 
-# download the latest tested pgbouncer distribution - 1.12
+# download the latest tested pgbouncer distribution - 1.19
 git clone https://github.com/pgbouncer/pgbouncer.git --branch "stable-1.19"
 
 # download pgbouncer-rr extensions
