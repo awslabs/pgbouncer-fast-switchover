@@ -189,7 +189,7 @@ Download and install pgbouncer-rr by running the following commands (Amazon Linu
 # install required packages - see https://github.com/pgbouncer/pgbouncer#building
 sudo yum install libevent-devel openssl-devel python-devel libtool git patch make -y
 
-# download the latest tested pgbouncer distribution - 1.12
+# download the latest tested pgbouncer distribution - 1.19
 git clone https://github.com/pgbouncer/pgbouncer.git --branch "stable-1.19"
 
 # download pgbouncer-rr extensions
@@ -310,7 +310,7 @@ The Kubernetes Service,[pgbouncer-svc.yaml](./pgbouncer-svc.yaml) uses Network L
 ### Deployment steps
 The EKS option automates the configuration and installation sections above. The deployment steps with EKS are:
 
-* [Deploy EKS cluster with Karpenter for automatic EC2 instance horizontal scaling](https://karpenter.sh/v0.13.2/getting-started/getting-started-with-eksctl/)
+* [Deploy EKS cluster with Karpenter for automatic EC2 instance horizontal scaling](https://karpenter.sh/v0.29/getting-started/getting-started-with-karpenter/)
 
 * [Install the AWS Load Balancer Controller add-on](https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html)
 
