@@ -34,6 +34,19 @@ MERGEFILES="\
    src/client.c\
    src/main.c\
    include/bouncer.h\
+   include/janitor.h\
+   include/loader.h\
+   include/objects.h\
+   include/pktbuf.h\
+   include/util.h\
+   src/admin.c\
+   src/janitor.c\
+   src/loader.c\
+   src/objects.c\
+   src/pktbuf.c\
+   src/server.c\
+   src/util.c\
+   doc/config.md\
    "
 for file in $MERGEFILES
 do
