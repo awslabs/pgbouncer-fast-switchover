@@ -10,8 +10,8 @@ RUN yum -y update
 RUN yum install -y tar net-tools curl vim unzip less libevent-devel openssl-devel python-devel libtool git patch make gcc wget --allowerasing
 
 # Install pip
-RUN curl -O https://bootstrap.pypa.io/get-pip.py
-RUN python3 get-pip.py --user
+RUN python get-pip.py --user
+RUN python -m pip install
 
 # Install pandoc
 RUN wget $PANDOC_URL && \
