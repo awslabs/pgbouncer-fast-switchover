@@ -24,7 +24,9 @@ USER pgbouncer
 WORKDIR /home/pgbouncer
 
 #Install aws cli
-RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-"$AWSCLIARCH".zip" -o "awscliv2.zip"
+RUN cd /home/pgbouncer
+#RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-"$AWSCLIARCH".zip" -o "awscliv2.zip"
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "awscliv2.zip"
 RUN unzip awscliv2.zip
 RUN ./aws/install
 RUN mkdir /home/pgbouncer/.aws
