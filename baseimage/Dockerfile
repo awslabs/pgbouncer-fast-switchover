@@ -28,9 +28,11 @@ RUN cd /home/pgbouncer
 #RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-"$AWSCLIARCH".zip" -o "awscliv2.zip"
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "awscliv2.zip"
 RUN unzip awscliv2.zip
-RUN ./aws/install
-RUN mkdir /home/pgbouncer/.aws
-COPY config /home/pgbouncer/.aws
+RUN pwd
+RUN ls -l 
+#RUN ./aws/install
+#RUN mkdir /home/pgbouncer/.aws
+#COPY config /home/pgbouncer/.aws
 
 #Install kubectl for the simulator pod scaler
 RUN apt-get install -y apt-transport-https ca-certificates
