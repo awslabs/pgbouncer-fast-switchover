@@ -10,7 +10,7 @@ import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as cdk from 'aws-cdk-lib/core';
 import * as cfn from 'aws-cdk-lib/aws-cloudformation';
 
-export class PgpPipelineStack extends Stack {
+export class PgbPipelineStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
   const BASE_REPO = new CfnParameter(this,"BASEREPO",{type:"String"});
@@ -26,11 +26,11 @@ export class PgpPipelineStack extends Stack {
   const GITHUB_BRANCH = new CfnParameter(this,"GITHUBBRANCH",{type:"String"});
   ///* uncomment when you test the stack and dont want to manually delete the ecr registry 
   const pgb_registry = new ecr.Repository(this,`pgb_repo`,{
-    repositoryName:BASE_REPO.valueAsString,
+    repositoryName:PGB_REPO.valueAsString,
     imageScanOnPush: true
   });
   //*/
-  //const base_registry = ecr.Repository.fromRepositoryName(this,`base_repo`,BASE_REPO.valueAsString)
+  const base_registry = ecr.Repository.fromRepositoryName(this,`base_repo`,BASE_REPO.valueAsString)
 
   //create a roleARN for codebuild 
   const buildRole = new iam.Role(this, 'PgpCodeBuildDeployRole',{
@@ -75,11 +75,10 @@ export class PgpPipelineStack extends Stack {
               `export AWS_ACCOUNT_ID="${this.account}"`,
               `export AWS_REGION="${this.region}"`,
               `export BASE_REPO="${BASE_REPO.valueAsString}"`,
-              `export PGB_GITHUB_BRANCH="${PGB_GITHUB_BRANCH.valueAsString}"`,
               `export BASE_TAG="${BASE_TAG.valueAsString}"`,
+              `export PGB_GITHUB_BRANCH="${PGB_GITHUB_BRANCH.valueAsString}"`,
               `export PGB_REPO="${PGB_REPO.valueAsString}"`,
               `export PGB_TAG="${PGB_ARM_TAG.valueAsString}"`,
-              `cd ../`,
               `chmod +x ./build.sh && ./build.sh`
             ],
           }
@@ -109,10 +108,10 @@ export class PgpPipelineStack extends Stack {
               `export AWS_ACCOUNT_ID="${this.account}"`,
               `export AWS_REGION="${this.region}"`,
               `export BASE_REPO="${BASE_REPO.valueAsString}"`,
-              `export BASE_TAG="${BASE_AMD_TAG.valueAsString}"`,
+              `export BASE_TAG="${BASE_TAG.valueAsString}"`,
+              `export PGB_GITHUB_BRANCH="${PGB_GITHUB_BRANCH.valueAsString}"`,
               `export PGB_REPO="${PGB_REPO.valueAsString}"`,
               `export PGB_TAG="${PGB_AMD_TAG.valueAsString}"`,
-              `cd ../`,
               `chmod +x ./build.sh && ./build.sh`
             ],
           }
@@ -145,7 +144,6 @@ export class PgpPipelineStack extends Stack {
               `export PGB_AMD_TAG="${PGB_AMD_TAG.valueAsString}"`,
               `export PGB_ARM_TAG="${PGB_ARM_TAG.valueAsString}"`,
               `export PGB_TAG="${PGB_TAG.valueAsString}"`,
-              `cd ../`,
               `chmod +x ./assemble_multiarch_image.sh && ./assemble_multiarch_image.sh`
             ],
           }
@@ -158,6 +156,8 @@ export class PgpPipelineStack extends Stack {
   });
     
   //we allow the buildProject principal to push images to ecr
+  base_registry.grantPullPush(pgb_image_arm_build.grantPrincipal);
+  base_registry.grantPullPush(pgb_image_amd_build.grantPrincipal);
   pgb_registry.grantPullPush(pgb_image_arm_build.grantPrincipal);
   pgb_registry.grantPullPush(pgb_image_amd_build.grantPrincipal);
   pgb_registry.grantPullPush(pgb_image_assembly.grantPrincipal);
