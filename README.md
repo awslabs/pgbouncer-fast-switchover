@@ -322,13 +322,18 @@ The EKS option automates the configuration and installation sections above. The 
 export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --output text --query Account)
 export AWS_REGION=us-west-2
 export BASE_REPO=baseimage
-export BASE_IMAGE_TAG=multiarch-al2
-export BASE_IMAGE_ARM_TAG=arm64
-export BASE_IMAGE_AMD_TAG=amd64
+export BASE_TAG=multiarch-al2
+export BASE_ARM_TAG=arm64
+export BASE_AMD_TAG=amd64
+export PGB_REPO=pgbouncer
+export PGB_TAG=fastswitchover.pg.stable.1.19.multiarch
+export PGB_ARM_TAG=amd64
+export PGB_AMD_TAG=arm64
 export GITHUB_USER=yahavb
 export GITHUB_BRANCH=master
 export GITHUB_REPO=pgbouncer-fast-switchover
 export PANDOC_VER=3.1.7
+export PGB_GITHUB_BRANCH=stable-1.19
 ```
 
 * Build the PGBouncer Docker image locally.

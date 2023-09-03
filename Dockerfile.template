@@ -1,0 +1,26 @@
+FROM $BASE_IMAGE
+ARG ARCH
+ENV ARCH=$ARCH
+ARG PGB_GITHUB_BRANCH
+ENV PGB_GITHUB_BRANCH=$PGB_GITHUB_BRANCH
+
+RUN git clone https://github.com/pgbouncer/pgbouncer.git --branch "$PGB_GITHUB_BRANCH" && \
+    git clone https://github.com/awslabs/pgbouncer-fast-switchover.git && \
+    cd pgbouncer-fast-switchover && \
+    ./install-pgbouncer-rr-patch.sh ../pgbouncer && \
+    cd ../pgbouncer && \
+    git submodule init && \
+    git submodule update && \
+    ./autogen.sh && \
+    ln -s "/usr/bin/"$ARCH"/-amazon-linux-gnu-pkg-config" "/usr/bin/"$ARCH"-redhat-linux-gnu-pkg-config" && \
+    ./configure --prefix=/usr/local --exec-prefix=/usr/bin && \
+    make && \
+    make install
+
+COPY ./start.sh /start.sh
+COPY ./pub_metrics.sh /pub_metrics.sh
+COPY ./adaptivepgbouncer.sh /adaptivepgbouncer.sh
+
+COPY ./routing_rules.py /home/pgbouncer/
+
+ENTRYPOINT ["/bin/bash", "/start.sh"]
