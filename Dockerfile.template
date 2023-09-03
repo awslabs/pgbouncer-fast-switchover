@@ -1,8 +1,4 @@
 FROM $BASE_IMAGE
-ARG ARCH
-ENV ARCH=$ARCH
-ARG PGB_GITHUB_BRANCH
-ENV PGB_GITHUB_BRANCH=$PGB_GITHUB_BRANCH
 RUN ls -l /usr/bin/
 
 RUN git clone https://github.com/pgbouncer/pgbouncer.git --branch "$PGB_GITHUB_BRANCH" && \
@@ -13,7 +9,7 @@ RUN git clone https://github.com/pgbouncer/pgbouncer.git --branch "$PGB_GITHUB_B
     git submodule init && \
     git submodule update && \
     ./autogen.sh && \
-    ln -s "/usr/bin/"$ARCH"/-amazon-linux-gnu-pkg-config" "/usr/bin/"$ARCH"-redhat-linux-gnu-pkg-config" && \
+    ln -s "/usr/bin/$ARCH/-amazon-linux-gnu-pkg-config" "/usr/bin/$ARCH-redhat-linux-gnu-pkg-config" && \
     ./configure --prefix=/usr/local --exec-prefix=/usr/bin && \
     make && \
     make install

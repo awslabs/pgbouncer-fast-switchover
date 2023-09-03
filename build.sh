@@ -11,5 +11,6 @@ export ARCH=$ARCH
 cat Dockerfile.template | envsubst > Dockerfile
 cat Dockerfile
 aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $PGB_IMAGE
-docker build --build-arg BASE_IMAGE=$BASE_IMAGE --build-arg PGB_GITHUB_BRANCH=$PGB_GITHUB_BRANCH --build-arg ARCH=$ARCH -t $PGB_IMAGE .
+#docker build --build-arg BASE_IMAGE=$BASE_IMAGE --build-arg PGB_GITHUB_BRANCH=$PGB_GITHUB_BRANCH --build-arg ARCH=$ARCH -t $PGB_IMAGE .
+docker build -t $PGB_IMAGE .
 docker push $PGB_IMAGE
