@@ -10,7 +10,7 @@ RUN yum -y update
 RUN yum install -y tar net-tools curl vim unzip less libevent-devel openssl-devel python-devel libtool git patch make gcc wget --allowerasing
 
 # Install pip
-RUN python -m pip install
+RUN python3 -m pip install
 
 # Install pandoc
 RUN wget $PANDOC_URL && \
