@@ -3,6 +3,7 @@ ARG ARCH
 ENV ARCH=$ARCH
 ARG PGB_GITHUB_BRANCH
 ENV PGB_GITHUB_BRANCH=$PGB_GITHUB_BRANCH
+RUN ls -l /usr/bin/
 
 RUN git clone https://github.com/pgbouncer/pgbouncer.git --branch "$PGB_GITHUB_BRANCH" && \
     git clone https://github.com/awslabs/pgbouncer-fast-switchover.git && \
