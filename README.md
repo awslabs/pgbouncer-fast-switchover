@@ -310,11 +310,28 @@ The Kubernetes Service,[pgbouncer-svc.yaml](./pgbouncer-svc.yaml) uses Network L
 ### Deployment steps
 The EKS option automates the configuration and installation sections above. The deployment steps with EKS are:
 
-* [Deploy EKS cluster with Karpenter for automatic EC2 instance horizontal scaling](https://karpenter.sh/v0.29/getting-started/getting-started-with-karpenter/)
+* [Deploy EKS cluster with Karpenter for automatic EC2 instance horizontal scaling](https://karpenter.sh/getting-started/getting-started-with-karpenter/)
 
 * [Install the AWS Load Balancer Controller add-on](https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html)
 
-* Build the PGBouncer Docker image.
+* Build the Pgbouncer docker image continuously
+
+1/ Populate the following enviroment variables.
+
+```bash
+export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --output text --query Account)
+export AWS_REGION=us-west-2
+export BASE_REPO=baseimage
+export BASE_IMAGE_TAG=multiarch-al2
+export BASE_IMAGE_ARM_TAG=arm64
+export BASE_IMAGE_AMD_TAG=amd64
+export GITHUB_USER=yahavb
+export GITHUB_BRANCH=master
+export GITHUB_REPO=pgbouncer-fast-switchover
+export PANDOC_VER=3.1.7
+```
+
+* Build the PGBouncer Docker image locally.
 
 ```bash
 ./build.sh
