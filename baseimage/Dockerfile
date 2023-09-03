@@ -9,10 +9,6 @@ ENV PANDOC_URL="https://github.com/jgm/pandoc/releases/download/"$PANDOC_VER"/"$
 RUN yum -y update
 RUN yum install -y tar net-tools curl vim unzip less libevent-devel openssl-devel python-devel libtool git patch make gcc wget --allowerasing
 
-# Install pip
-RUN yum install -y python3-pip 
-RUN python3 -m pip install --user pipenv
-
 # Install pandoc
 RUN wget $PANDOC_URL && \
     tar xvzf ./$PANDOC_PKG --strip-components 1 -C /usr/local
@@ -26,7 +22,11 @@ USER pgbouncer
 WORKDIR /home/pgbouncer
 
 #Install aws cli
-RUN pip install awscli
+RUN if [[ "$ARCH" == "arm64" ]] ; then AWSCLIARCH="aarch64" fi
+RUN if [[ "$ARCH" == "amd64" ]] ; then AWSCLIARCH="x86_64" fi
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-"$AWSCLIARCH".zip" -o "awscliv2.zip"
+RUN unzip awscliv2.zip
+RUN ./aws/install
 RUN mkdir /home/pgbouncer/.aws
 COPY config /home/pgbouncer/.aws
 
