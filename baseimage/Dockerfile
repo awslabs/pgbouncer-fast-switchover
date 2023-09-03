@@ -3,7 +3,7 @@ ARG PANDOC_VER
 ENV PANDOC_VER=$PANDOC_VER
 ARG ARCH
 ENV ARCH=$ARCH
-ENV PANDOC_PKG="pandoc-"$PANDOC_VER"-linux-"$ARCH".tar.gz
+ENV PANDOC_PKG="pandoc-"$PANDOC_VER"-linux-"$ARCH".tar.gz"
 ENV PANDOC_URL="https://github.com/jgm/pandoc/releases/download/"$PANDOC_VER"/"$PANDOC_PKG
 
 RUN yum -y update
