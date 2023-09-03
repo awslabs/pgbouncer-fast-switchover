@@ -29,14 +29,14 @@ RUN cd /home/pgbouncer
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "awscliv2.zip"
 RUN unzip awscliv2.zip
 RUN pwd
-RUN ls -l 
+RUN ls -l aws
 #RUN ./aws/install
 #RUN mkdir /home/pgbouncer/.aws
 #COPY config /home/pgbouncer/.aws
 
 #Install kubectl for the simulator pod scaler
-RUN apt-get install -y apt-transport-https ca-certificates
-RUN curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://dl.k8s.io/apt/doc/apt-key.gpg
-RUN echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | tee /etc/apt/sources.list.d/kubernetes.list
-RUN apt-get update
-RUN apt-get install -y kubectl
+RUN curl -O "https://s3.us-west-2.amazonaws.com/amazon-eks/1.27.4/2023-08-16/bin/linux/"$ARCH"/kubectl"
+RUN chmod +x ./kubectl
+RUN mkdir -p $HOME/bin && cp ./kubectl $HOME/bin/kubectl && export PATH=$HOME/bin:$PATH
+RUN echo 'export PATH=$HOME/bin:$PATH' >> /home/pgbouncer/.bashrc
+RUN kubectl version --short --client
