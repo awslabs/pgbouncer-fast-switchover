@@ -11,7 +11,7 @@ RUN yum install -y tar net-tools curl vim unzip less libevent-devel openssl-deve
 
 # Install pip
 RUN yum install -y python3-pip 
-RUN python3 -m pip install
+RUN python3 -m pip install --user pipenv
 
 # Install pandoc
 RUN wget $PANDOC_URL && \
