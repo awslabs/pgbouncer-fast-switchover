@@ -20,7 +20,7 @@ RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/s
 RUN chmod +x ./kubectl && \
     mv kubectl /usr/sbin
 RUN chmod 777 -R /usr/local/
-RUN kubectl version --short --client
+RUN kubectl version --client
 
 # Installed with pgbouncer
 RUN useradd -ms /bin/bash pgbouncer && \
