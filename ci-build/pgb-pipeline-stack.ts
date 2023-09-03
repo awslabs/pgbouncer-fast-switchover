@@ -144,7 +144,7 @@ export class PgbPipelineStack extends Stack {
               `export PGB_AMD_TAG="${PGB_AMD_TAG.valueAsString}"`,
               `export PGB_ARM_TAG="${PGB_ARM_TAG.valueAsString}"`,
               `export PGB_TAG="${PGB_TAG.valueAsString}"`,
-              `chmod +x ./assemble_multiarch_image.sh && ./assemble_multiarch_image.sh`
+              `chmod +x ./assemble_pgb_multiarch_image.sh && ./assemble_pgb_multiarch_image.sh`
             ],
           }
         },
