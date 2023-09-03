@@ -35,16 +35,7 @@ RUN cd /home/pgbouncer
 #RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-"$AWSCLIARCH".zip" -o "awscliv2.zip"
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "awscliv2.zip"
 RUN unzip awscliv2.zip
-RUN pwd
-RUN ls -l aws
 RUN ./aws/install
+RUN /usr/local/bin/aws --version
 RUN mkdir /home/pgbouncer/.aws
 COPY config /home/pgbouncer/.aws
-
-
-# Install kubectl for the simulator pod scaler
-#RUN curl -O "https://s3.us-west-2.amazonaws.com/amazon-eks/1.27.4/2023-08-16/bin/linux/"$ARCH"/kubectl"
-#RUN chmod +x ./kubectl
-#RUN mkdir -p $HOME/bin && cp ./kubectl $HOME/bin/kubectl && export PATH=$HOME/bin:$PATH
-#RUN echo 'export PATH=$HOME/bin:$PATH' >> /home/pgbouncer/.bashrc
-#RUN kubectl version --short --client
