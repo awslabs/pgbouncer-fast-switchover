@@ -10,7 +10,6 @@ RUN yum -y update
 RUN yum install -y tar net-tools curl vim unzip less libevent-devel openssl-devel python-devel libtool git patch make gcc wget --allowerasing
 
 # Install pip
-RUN yum install -y python37
 RUN curl -O https://bootstrap.pypa.io/get-pip.py
 RUN python3 get-pip.py --user
 
