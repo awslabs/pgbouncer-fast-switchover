@@ -1,4 +1,6 @@
 FROM public.ecr.aws/amazonlinux/amazonlinux:2022
+ARG AWSCLIARCH
+ENV AWSCLIARCH=$AWSCLIARCH
 ARG PANDOC_VER
 ENV PANDOC_VER=$PANDOC_VER
 ARG ARCH
@@ -22,8 +24,6 @@ USER pgbouncer
 WORKDIR /home/pgbouncer
 
 #Install aws cli
-RUN if [[ "$ARCH" == "arm64" ]] ; then AWSCLIARCH="aarch64" fi
-RUN if [[ "$ARCH" == "amd64" ]] ; then AWSCLIARCH="x86_64" fi
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-"$AWSCLIARCH".zip" -o "awscliv2.zip"
 RUN unzip awscliv2.zip
 RUN ./aws/install
