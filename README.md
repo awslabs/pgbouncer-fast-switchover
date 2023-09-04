@@ -336,7 +336,7 @@ export PANDOC_VER=3.1.7
 export PGB_GITHUB_BRANCH=stable-1.19
 ```
 
-NEED Fix 4 :2/ Build pipeline for the base image
+NEED Fix 5 :2/ Build pipeline for the base image
 
 ```bash
 ./ci-build/deploy-base-pipeline.sh 
