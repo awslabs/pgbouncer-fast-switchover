@@ -9,7 +9,7 @@ ENV PANDOC_PKG="pandoc-"$PANDOC_VER"-linux-"$ARCH".tar.gz"
 ENV PANDOC_URL="https://github.com/jgm/pandoc/releases/download/"$PANDOC_VER"/"$PANDOC_PKG
 
 RUN yum -y update
-RUN yum install -y postgresql-server postgresql-contrib tar net-tools curl vim unzip less libevent-devel openssl-devel python-devel libtool git patch make gcc wget --allowerasing
+RUN yum install -y tar net-tools curl vim unzip less libevent-devel openssl-devel python-devel libtool git patch make gcc wget --allowerasing
 
 # Install pandoc
 RUN wget $PANDOC_URL && \
@@ -23,6 +23,7 @@ RUN chmod 777 -R /usr/local/
 RUN kubectl version --client
 
 # Install psql
+RUN yum list | grep postgresql
 RUN psql --version
 
 # Installed with pgbouncer
