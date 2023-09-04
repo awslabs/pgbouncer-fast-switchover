@@ -22,6 +22,10 @@ RUN chmod +x ./kubectl && \
 RUN chmod 777 -R /usr/local/
 RUN kubectl version --client
 
+# Install psql
+RUN amazon-linux-extras install postgresql13
+RUN psql --version
+
 # Installed with pgbouncer
 RUN useradd -ms /bin/bash pgbouncer && \
     chown pgbouncer /home/pgbouncer && \
