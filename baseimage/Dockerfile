@@ -28,18 +28,18 @@ RUN yum install -y postgresql15-server postgresql15-contrib
 RUN psql --version
 
 # Installed with pgbouncer
-#RUN useradd -ms /bin/bash pgbouncer && \
-#    chown pgbouncer /home/pgbouncer && \
-#    chown pgbouncer /
+RUN useradd -ms /bin/bash pgbouncer && \
+    chown pgbouncer /home/pgbouncer && \
+    chown pgbouncer /
 
-#USER pgbouncer
-#WORKDIR /home/pgbouncer
+USER pgbouncer
+WORKDIR /home/pgbouncer
 
 #Install aws cli
-#RUN cd /home/pgbouncer
-#RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "awscliv2.zip"
-#RUN unzip awscliv2.zip
-#RUN ./aws/install
-#RUN /usr/local/bin/aws --version
-#RUN mkdir /home/pgbouncer/.aws
-#COPY config /home/pgbouncer/.aws
+RUN cd /home/pgbouncer
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "awscliv2.zip"
+RUN unzip awscliv2.zip
+RUN ./aws/install
+RUN /usr/local/bin/aws --version
+RUN mkdir /home/pgbouncer/.aws
+COPY config /home/pgbouncer/.aws
