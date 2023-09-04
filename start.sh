@@ -19,7 +19,7 @@ fi
 
 cat <<- END > $INI
 [databases]
-    dbname = $PGB_DATABASES
+    host = $PGB_DATABASES
 [pgbouncer]
     listen_port = ${PGB_LISTEN_PORT:-5432}
     listen_addr = ${PGB_LISTEN_ADDR:-0.0.0.0}
