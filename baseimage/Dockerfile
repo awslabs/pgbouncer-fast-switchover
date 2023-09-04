@@ -23,7 +23,7 @@ RUN chmod 777 -R /usr/local/
 RUN kubectl version --client
 
 # Install psql
-RUN yum install -y postgresql13
+RUN yum install -y postgresql
 RUN psql --version
 
 # Installed with pgbouncer
