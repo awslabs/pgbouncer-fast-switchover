@@ -7,7 +7,7 @@ USERLIST="${PGB_DIR}/userlist.txt"
 
 rm -f "${INI}" "${USERLIST}"
 
-if [[ -z "${PGB_DATABASE1:-}" ]]; then
+if [[ -z "${PGB_DATABASES:-}" ]]; then
   echo "Error: no databases specified in \$PGB_DATABASES"
   exit 1
 fi
@@ -19,19 +19,17 @@ fi
 
 cat <<- END > $INI
 [databases]
-    $PGB_DATABASE1
-    $PGB_DATABASE2
-    $PGB_DATABASE3
+    $PGB_DATABASES
 [pgbouncer]
     listen_port = ${PGB_LISTEN_PORT:-5432}
     listen_addr = ${PGB_LISTEN_ADDR:-0.0.0.0}
     auth_type = md5
-    default_pool_size = $default_pool_size
-    log_connections = $log_connections
-    log_disconnections = $log_disconnections
-    log_pooler_errors = $log_pooler_errors
-    routing_rules_py_module_file = $routing_rules_py_module_file
-    log_stats = $log_stats
+    default_pool_size = 20
+    log_connections = 1
+    log_disconnections = 1
+    log_pooler_errors = 1
+    routing_rules_py_module_file = /home/pgbouncer/routing_rules.py
+    log_stats = 1
     auth_file = $USERLIST
     logfile = $PGB_DIR/pgbouncer.log
     pidfile = $PGB_DIR/pgbouncer.pid
@@ -58,4 +56,4 @@ chmod 0600 $INI
 chmod 0600 $USERLIST
 /pub_metrics.sh &
 /adaptivepgbouncer.sh &
-/usr/bin/bin/pgbouncer $INI
+pgbouncer $INI
