@@ -348,7 +348,7 @@ export PGB_GITHUB_BRANCH=stable-1.19
 ./ci-build/deploy-pgb-pipeline.sh
 ```
 
-* Build the PGBouncer Docker image locally.
+* NEED FIX - Build the PGBouncer Docker image locally.
 
 ```bash
 ./build.sh
