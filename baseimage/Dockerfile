@@ -23,7 +23,7 @@ RUN chmod 777 -R /usr/local/
 RUN kubectl version --client
 
 # Install psql
-RUN yum list | grep postgresql
+#RUN yum list | grep postgresql
 RUN yum install -y postgresql15-server postgresql15-contrib
 RUN psql --version
 
