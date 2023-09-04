@@ -327,13 +327,25 @@ export BASE_ARM_TAG=arm64
 export BASE_AMD_TAG=amd64
 export PGB_REPO=pgbouncer
 export PGB_TAG=fastswitchover.pg.stable.1.19.multiarch
-export PGB_ARM_TAG=amd64
-export PGB_AMD_TAG=arm64
+export PGB_ARM_TAG=arm64
+export PGB_AMD_TAG=amd64
 export GITHUB_USER=yahavb
 export GITHUB_BRANCH=master
 export GITHUB_REPO=pgbouncer-fast-switchover
 export PANDOC_VER=3.1.7
 export PGB_GITHUB_BRANCH=stable-1.19
+```
+
+2/ Build pipeline for the base image
+
+```bash
+./ci-build/deploy-base-pipeline.sh 
+```
+
+3/ Build pipeline for the pgbouncer-fast-swithcover image
+
+```bash
+./ci-build/deploy-pgb-pipeline.sh
 ```
 
 * Build the PGBouncer Docker image locally.
