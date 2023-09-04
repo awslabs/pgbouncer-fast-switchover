@@ -1,12 +1,16 @@
-#!/bin/bash
-  
-account=$(aws sts get-caller-identity --output text --query Account)
-region="us-west-2"
-repo=pgbouncer
-repo_name='.dkr.ecr.'$region'.amazonaws.com/'$repo':1.15.0amzn2.aarch64'
-repo_url=$account$repo_name
-
-aws ecr get-login-password --region $region | docker login --username AWS --password-stdin $repo_url
-docker build -t $repo -f ./Dockerfile .
-docker tag $repo:latest $repo_url
-docker push $repo_url
+#!/bin/bash -x
+PGB_IMAGE=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$PGB_REPO:$PGB_TAG
+export BASE_IMAGE="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$BASE_REPO:$BASE_TAG"
+if [ "$PGB_TAG" = "arm64" ]; then
+  ARCH="aarch64"
+fi
+if [ "$PGB_TAG" = "amd64" ]; then
+  ARCH="x86_64"
+fi
+export ARCH=$ARCH
+cat Dockerfile.template | envsubst > Dockerfile
+cat Dockerfile
+aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $PGB_IMAGE
+#docker build --build-arg BASE_IMAGE=$BASE_IMAGE --build-arg PGB_GITHUB_BRANCH=$PGB_GITHUB_BRANCH --build-arg ARCH=$ARCH -t $PGB_IMAGE .
+docker build -t $PGB_IMAGE .
+docker push $PGB_IMAGE
