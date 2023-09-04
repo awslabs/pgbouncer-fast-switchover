@@ -47,4 +47,6 @@ COPY ./adaptivepgbouncer.sh /adaptivepgbouncer.sh
 
 COPY ./routing_rules.py /home/pgbouncer/
 
+RUN ls -l /usr/bin/
+RUN ls -l /usr/bin/bin
 #ENTRYPOINT ["/bin/bash", "/start.sh"]
