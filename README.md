@@ -2,18 +2,18 @@
 
 Have you ever wanted to split your database load across multiple servers or clusters without impacting the configuration or code of your client applications? Or perhaps you have wished for a way to intercept and modify application queries, so that you can make them use optimized tables (sorted, pre-joined, pre-aggregated, etc.), add security filters, or hide changes you have made in the schema?  
 
-The [pgbouncer-rr](https://github.com/awslabs/pgbouncer-rr-patch) project is based on [pgbouncer](https://pgbouncer.github.io/usage.html#description), an open source PostgreSQL connection pooler. It adds two new significant features:    
+The [pgbouncer-fast-switchover](https://github.com/awslabs/pgbouncer-fast-switchover) project is based on [pgbouncer](https://pgbouncer.github.io/usage.html#description), an open source PostgreSQL connection pooler. It adds three new significant features:    
 1. **Routing:** intelligently send queries to different database servers from one client connection; use it to partition or load balance across multiple servers/clusters.  
 2. **Rewrite:** intercept and programmatically change client queries before they are sent to the server: use it to optimize or otherwise alter queries without modifying your application.
 3. **Fast Switchovers:** use topology from a cluster to pre-create connections to writer/readers and automatically determine the new writer when a switchover is performed. All subsequent queries go to the new writer node.
 
 <img style="margin-left: 100px;" src="images/diagram1.jpg" alt="Diagram1" height="300" width="600">
 
-Pgbouncer-rr works the same way as pgbouncer; any target application can be connected to pgbouncer-rr as if it were an Amazon Redshift or PostgreSQL server, and pgbouncer-rr creates a connection to the actual server, or reuses an existing connection.  
+Pgbouncer-fast-switchover works the same way as pgbouncer; any target application can be connected to pgbouncer-fast-switchover as if it were an Amazon Redshift or PostgreSQL server, and pgbouncer-fast-switchover creates a connection to the actual server, or reuses an existing connection.  
 
-You can elect to deploy multiple instances of pgbouncer-rr to avoid throughput bottlenecks or single points of failure, or to support multiple configurations. It can live in an Auto Scaling group, and behind an Elastic Load Balancing load balancer. It can be deployed to a public subnet while your servers reside in private subnets. You can choose to run it as a bastion server using SSH tunneling, or you can use pgbouncer's recently introduced SSL support for encryption and authentication.  
+You can elect to deploy multiple instances of pgbouncer-fast-switchover to avoid throughput bottlenecks or single points of failure, or to support multiple configurations. It can live in an Auto Scaling group, and behind an Elastic Load Balancing load balancer. It can be deployed to a public subnet while your servers reside in private subnets. You can choose to run it as a bastion server using SSH tunneling, or you can use pgbouncer's recently introduced SSL support for encryption and authentication.  
 
-Documentation and community support for pgbouncer can be easily found [online](https://pgbouncer.github.io/usage.html#description);  pgbouncer-rr is a superset of pgbouncer.  
+Documentation and community support for pgbouncer can be easily found [online](https://pgbouncer.github.io/usage.html#description);  pgbouncer-fast-switchover is a superset of pgbouncer.  
 
 Now I’d like to talk about the query routing and query rewrite feature enhancements.
 
@@ -29,8 +29,8 @@ Here’s another example: you might want to implement controlled load balancing 
 
 Your routing function has access to the full power of the python language and the myriad of available Python modules. You can use the regular expression module ([re](https://docs.python.org/2/library/re.html)) to match words and patterns in the query string, or use the SQL parser module ([sqlparse](https://pypi.python.org/pypi/sqlparse)) to support more sophisticated/robust query parsing. You may also want to use the AWS SDK module ([boto](https://aws.amazon.com/sdk-for-python/)) to read your routing table configurations from Amazon DynamoDB.
    
-The Python routing function is dynamically loaded by pgbouncer-rr, from the file you specify in the configuration:  
-`routing_rules_py_module_file = /etc/pgbouncer-rr/routing_rules.py`
+The Python routing function is dynamically loaded by pgbouncer-fast-switchover, from the file you specify in the configuration:  
+`routing_rules_py_module_file = /etc/pgbouncer-fast-switchover/routing_rules.py`
 
 The file should contain the following Python function:    
 `def routing_rules(username, query, in_transaction):`  
@@ -121,7 +121,7 @@ The rewrite feature provides the opportunity to manipulate application queries e
  - Roll out new schemas, resolve naming conflicts and the like, by changing identifier names on the fly.
  
 The rewrite function is also implemented in a fully configurable python function, dynamically loaded from an external module specified in the configuration:
-`rewrite_query_py_module_file = /etc/pgbouncer-rr/rewrite_query.py`
+`rewrite_query_py_module_file = /etc/pgbouncer-fast-switchover/rewrite_query.py`
 
 The file should contain the python function:    
 `def rewrite_query(username, query, in_transaction):`  
@@ -130,9 +130,9 @@ The file should contain the python function:
   
 Implementing a query rewrite function is straightforward when the incoming application queries have fixed formats that are easily detectable and easily manipulated, perhaps using regular expression search/replace logic in the Python function. It is much more challenging to build a robust rewrite function to handle SQL statements with arbitrary format and complexity.  
 
-Enabling the query rewrite function triggers pgbouncer-rr to enforce that a complete query is contained in the incoming client socket buffer. Long queries are often split across multiple network packets; they should all be in the buffer before the rewrite function is called. This requires that the buffer size be large enough to accommodate the largest query. The default buffer size (2048) is likely too small, so specify a much larger size in the configuration: `pkt_buf = 32768`  
+Enabling the query rewrite function triggers pgbouncer-fast-switchover to enforce that a complete query is contained in the incoming client socket buffer. Long queries are often split across multiple network packets; they should all be in the buffer before the rewrite function is called. This requires that the buffer size be large enough to accommodate the largest query. The default buffer size (2048) is likely too small, so specify a much larger size in the configuration: `pkt_buf = 32768`  
 
-If a partially received query is detected, and there is room in the buffer for the remainder of the query, pgbouncer-rr waits for the remaining packets to be received before processing the query. If the buffer is not large enough for the incoming query, or if it is not large enough to hold the re-written query (which may be longer than the original), then the rewrite function will fail. By default, the failure is logged, and the original query string will be passed to the server unchanged. You can force the client connection to terminate instead, by setting:  `rewrite_query_disconnect_on_failure = true`.  
+If a partially received query is detected, and there is room in the buffer for the remainder of the query, pgbouncer-fast-switchover waits for the remaining packets to be received before processing the query. If the buffer is not large enough for the incoming query, or if it is not large enough to hold the re-written query (which may be longer than the original), then the rewrite function will fail. By default, the failure is logged, and the original query string will be passed to the server unchanged. You can force the client connection to terminate instead, by setting:  `rewrite_query_disconnect_on_failure = true`.  
 
  
 #### Simple Query Rewrite Example
@@ -150,7 +150,7 @@ By experimenting, you have determined that the best possible solution is to have
 So you implement the new tables, and take care of their population in your ETL processes. 
 But, you'd like to avoid directly exposing these new tables to your reporting or analytic client applications. This might be the best optimization today, but who knows what the future holds? Maybe you'll come up with a better optimization later, or maybe Redshift will introduce cool new features that provide a simpler alternative.
 
-So, you implement a pgbouncer-rr rewrite function to change the original queries on the fly.
+So, you implement a pgbouncer-fast-switchover rewrite function to change the original queries on the fly.
 
 Ensure the configuration file setting `rewrite_query_py_module_file` specifies the path to your python function file, say `~/rewrite_query.py`.
 
@@ -214,7 +214,7 @@ admin_users = admindb
 # Getting Started
 
 **Install**  
-Download and install pgbouncer-rr by running the following commands (Amazon Linux/RHEL/CentOS):
+Download and install pgbouncer-fast-switchover by running the following commands (Amazon Linux/RHEL/CentOS):
 ```
 # install required packages - see https://github.com/pgbouncer/pgbouncer#building
 sudo yum install libevent-devel openssl-devel python-devel libtool git patch make -y
@@ -222,12 +222,12 @@ sudo yum install libevent-devel openssl-devel python-devel libtool git patch mak
 # download the latest tested pgbouncer distribution - 1.19
 git clone https://github.com/pgbouncer/pgbouncer.git --branch "stable-1.19"
 
-# download pgbouncer-rr extensions
-git clone https://github.com/awslabs/pgbouncer-rr-patch.git
+# download pgbouncer-fast-switchover extensions
+git clone https://github.com/awslabs/pgbouncer-fast-switchover-patch.git
 
-# merge pgbouncer-rr extensions into pgbouncer code
-cd pgbouncer-rr-patch
-./install-pgbouncer-rr-patch.sh ../pgbouncer
+# merge pgbouncer-fast-switchover extensions into pgbouncer code
+cd pgbouncer-fast-switchover-patch
+./install-pgbouncer-fast-switchover-patch.sh ../pgbouncer
 
 # build and install
 cd ../pgbouncer
@@ -244,31 +244,31 @@ Create a configuration file, using `./pgbouncer-example.ini` as a starting point
 
 Set up user authentication - see [authentication file format](https://pgbouncer.github.io/config.html#authentication-file-format). NOTE: the recently added pgbouncer `auth_query` feature will unfortunately not work with Amazon Redshift.  
 
-By default, pgbouncer-rr does not support SSL/TLS connections. However, you can experiment with pgbouncer's newest [TLS/SSL feature](https://github.com/pgbouncer/pgbouncer/blob/master/doc/config.rst#tls-settings). Just add a private key and certificate to your pgbouncer-rr configuration:
+By default, pgbouncer-fast-switchover does not support SSL/TLS connections. However, you can experiment with pgbouncer's newest [TLS/SSL feature](https://github.com/pgbouncer/pgbouncer/blob/master/doc/config.rst#tls-settings). Just add a private key and certificate to your pgbouncer-fast-switchover configuration:
 ```
 client_tls_sslmode=allow
-client_tls_key_file = ./pgbouncer-rr-key.key
-client_tls_cert_file = ./pgbouncer-rr-key.crt
+client_tls_key_file = ./pgbouncer-fast-switchover-key.key
+client_tls_cert_file = ./pgbouncer-fast-switchover-key.crt
 ```
 Hint: Here's how to easily generate a test key with a self-signed certificate using openssl:
 ```
-openssl req -newkey rsa:2048 -nodes -keyout pgbouncer-rr-key.key -x509 -days 365 -out pgbouncer-rr-key.crt
+openssl req -newkey rsa:2048 -nodes -keyout pgbouncer-fast-switchover-key.key -x509 -days 365 -out pgbouncer-fast-switchover-key.crt
 ```
   
 **Configure firewall**  
-Configure your linux firewall to enable incoming connections on the configured pgbouncer-rr listening port. Example:
+Configure your linux firewall to enable incoming connections on the configured pgbouncer-fast-switchover listening port. Example:
 ```
 sudo firewall-cmd --zone=public --add-port=5439/tcp --permanent
 sudo firewall-cmd --reload
 ```
-If you are running pgbouncer-rr on an Amazon EC2 instance, the instance Security Group must also be configured to allow incoming TCP connections on the listening port.  
+If you are running pgbouncer-fast-switchover on an Amazon EC2 instance, the instance Security Group must also be configured to allow incoming TCP connections on the listening port.  
   
 **Launch**  
-Run pgbouncer-rr as a daemon using the commandline `pgbouncer <config_file> -d`.   
+Run pgbouncer-fast-switchover as a daemon using the commandline `pgbouncer <config_file> -d`.   
 See `pgbouncer --help` for commandline options. _Hint: use `-v` to enable verbose logging. If you look carefully in the logfile you will see evidence of the query routing and query rewrite features in action._  
 
 **Connect**  
-Configure your client application as though you were connecting directly to a Redshift or PostgreSQL database, but be sure to use the pgbouncer-rr hostname and listening port.  
+Configure your client application as though you were connecting directly to a Redshift or PostgreSQL database, but be sure to use the pgbouncer-fast-switchover hostname and listening port.  
 Example – using psql   
 ```
 psql -h pgbouncer-dnshostname -U dbuser -d dev -p 5439
@@ -372,14 +372,14 @@ pgbouncer   LoadBalancer   10.100.190.30   pgbouncer-14d32ab567b83e8f.elb.us-wes
 
 Use the EXTERNAL-IP value, `pgbouncer-14d32ab567b83e8f.elb.us-west-2.amazonaws.com` as the endpoint to connect the database
 
-### How to view the pgbouncer-rr logs?
+### How to view the pgbouncer-fast-switchover logs?
 
 Pgbouncer default logging writes the process logs to stdout and stderr as well as a preconfigured log file. One can view the log in three ways:
 * [Get a shell to the pgbouncer running container and view the log](https://kubernetes.io/docs/tasks/debug/debug-application/get-shell-running-container/)
 Discover the pgbouncer process by:
 
 ```bash
-[pgbouncer-rr-patch]$kubectl get po 
+[pgbouncer-fast-switchover-patch]$kubectl get po 
 NAME                           READY   STATUS    RESTARTS   AGE
 appload-6cb95bb44b-s6kgb       1/1     Running   0          41h
 appselect-7678cc87b6-cdfq9     1/1     Running   0          41h
@@ -391,7 +391,7 @@ pgbouncer-5dc7498984-f6js2     1/1     Running   0          41h
 Use the `pgbouncer-5dc7498984-f6js2` for getting the container shell
 
 ```bash
-[pgbouncer-rr-patch]$kubectl exec -it pgbouncer-5dc7498984-f6js2 -- /bin/bash
+[pgbouncer-fast-switchover-patch]$kubectl exec -it pgbouncer-5dc7498984-f6js2 -- /bin/bash
 [pgbouncer@pgbouncer-5dc7498984-f6js2 ~]$ vi pgbouncer.log
 ```
 
@@ -399,7 +399,7 @@ Use the `pgbouncer-5dc7498984-f6js2` for getting the container shell
 Viewing the container's stdout and stderr is preferred if the pgbouncer process is the only one running. 
 
 ```bash
-[pgbouncer-rr-patch]$kubectl logs pgbouncer-5dc7498984-f6js2
+[pgbouncer-fast-switchover-patch]$kubectl logs pgbouncer-5dc7498984-f6js2
 ```
 
 * View the logs in CloudWatch. 
@@ -409,13 +409,13 @@ To stream container logs running in Amazon Elastic Kubernetes Service (Amazon EK
 You must push changes to EKS if you need to modify the pgbouncer configuration or binaries. Changing configurations is done using the kubectl tool, but updating binaries requires rebuilding the docker image and pushing it to the image registry (ECR). Below we describe both methods.
 
 * Making configuration changes
-The pgbouncer-rr config is stored in [pgbouncer-deploy.yaml](./pgbouncer-deploy.yaml) or [pgbouncer-svc.yaml](./pgbouncer-svc.yaml). Say we wanted to increase the [default_pool_size](https://www.pgbouncer.org/config.html). You need to modify `default_pool_size` in [pgbouncer-deploy.yaml](./pgbouncer-deploy.yaml) and execute:
+The pgbouncer-fast-switchover config is stored in [pgbouncer-deploy.yaml](./pgbouncer-deploy.yaml) or [pgbouncer-svc.yaml](./pgbouncer-svc.yaml). Say we wanted to increase the [default_pool_size](https://www.pgbouncer.org/config.html). You need to modify `default_pool_size` in [pgbouncer-deploy.yaml](./pgbouncer-deploy.yaml) and execute:
 
 ```bash
 kubectl apply -f ./pgbouncer-deploy.yaml
 ```
 * Making binaries changes
-The pgbouncer-rr docker specification is stored in [Dockerfile](./Dockerfile). Say you want to upgrade the pgbouncer version from 1.15 to 1.16. You need to modify `--branch "pgbouncer_1_15_0"`. Instead of:
+The pgbouncer-fast-switchover docker specification is stored in [Dockerfile](./Dockerfile). Say you want to upgrade the pgbouncer version from 1.15 to 1.16. You need to modify `--branch "pgbouncer_1_15_0"`. Instead of:
 
 ```dockerfile
 RUN git clone https://github.com/pgbouncer/pgbouncer.git --branch "pgbouncer_1_15_0" && \
@@ -433,7 +433,7 @@ Then you rebuild and push the changes to the docker image registry and rollout t
 kubectl rollout restart deploy pgbouncer
 ```
 
-# Other uses for pgbouncer-rr
+# Other uses for pgbouncer-fast-switchover
 
 It can be used for lots of things, really. In addition to the examples shown above, here are some other use cases suggested by colleagues:  
 
@@ -449,7 +449,7 @@ Actually, your use cases don't need to be limited to just routing and query rewr
 - Publish custom CloudWatch metrics, enabling you to monitor specific query patterns and/or user interactions with your database(s).  
 - Capture SQL DDL and COPY/Write Statements and wrap them into Kinesis `put-records` as input to the method described in Erik Swensson's most excellent post: [Building Multi-AZ or Multi-Region Amazon Redshift Clusters](https://blogs.aws.amazon.com/bigdata/post/Tx13ZDHZANSX9UX/Building-Multi-AZ-or-Multi-Region-Amazon-Redshift-Clusters)  
 
-We'd love to hear your thoughts and ideas for pgbouncer-rr functions.    
+We'd love to hear your thoughts and ideas for pgbouncer-fast-switchover functions.    
 
 
 # Legal Notice
