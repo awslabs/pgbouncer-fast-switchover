@@ -4,7 +4,8 @@ Have you ever wanted to split your database load across multiple servers or clus
 
 The [pgbouncer-rr](https://github.com/awslabs/pgbouncer-rr-patch) project is based on [pgbouncer](https://pgbouncer.github.io/usage.html#description), an open source PostgreSQL connection pooler. It adds two new significant features:    
 1. **Routing:** intelligently send queries to different database servers from one client connection; use it to partition or load balance across multiple servers/clusters.  
-2. **Rewrite:** intercept and programmatically change client queries before they are sent to the server: use it to optimize or otherwise alter queries without modifying your application.   
+2. **Rewrite:** intercept and programmatically change client queries before they are sent to the server: use it to optimize or otherwise alter queries without modifying your application.
+3. **Fast Switchovers:** use topology from a cluster to pre-create connections to writer/readers and automatically determine the new writer when a switchover is performed. All subsequent queries go to the new writer node.
 
 <img style="margin-left: 100px;" src="images/diagram1.jpg" alt="Diagram1" height="300" width="600">
 
@@ -179,6 +180,35 @@ SELECT prodname, SUM(total) FROM sales JOIN product USING (productid) GROUP BY p
 But now, when you look in the Redshift console 'Queries' tab, you will see that the  query received by Redshift is the rewritten version that uses the new product_sales table - leveraging your pre-joined, pre-aggregated data and the targeted sort and dist keys:
 ```
 SELECT prodname, SUM(total) FROM product_sales GROUP BY prodname ORDER BY prodname;
+```
+## Fast Switchovers
+
+Pgbouncer-fast-switchover makes use of a metadata table in a Postgres multi-node cluster to determine all nodes. If using fast switchovers, PgBouncer will create a connection pool to the configured writer on start-up and `RELOAD`. The `topology_query` is used to determine the additional nodes in the cluster, and new connection pools are also created to the nodes. Once a switchover or failover is detected, PgBouncer will pause new client connections until a new writer is detected from the remaining healthy nodes using `pg_is_in_recovery()` to poll every 100ms. After the writer is determined, connections are resumed and all new queries are routed to the promoted writer.
+
+#### Configuration
+
+Below you will find an example configuration that works with an [RDS Multi-AZ with readable standby](https://aws.amazon.com/rds/features/multi-az/) cluster. Options that can be configured include:
+
+`polling_frequency`: How often to poll for a new writer in seconds. Maps to 100ms by default (.1).
+`server_failed_delay`: How long to wait before attempting to recreate a connection pool to the old writer during a switchover. 30 seconds is the default.
+
+The following uses default polling times and a `topology_query` configured to work with RDS PostgreSQL.
+
+```ini
+[databases]
+postgres = host=writer.cluster-cpkicoma6jyq.us-west-2.rds.amazonaws.com port=5432 user=master password=notaverysecurepassword dbname=postgres topology_query='select endpoint from rds_tools.show_topology()'
+
+[pgbouncer]
+listen_addr = *
+listen_port = 5432
+auth_type = plain
+auth_file = userlist.txt
+server_tls_sslmode = require
+pool_mode = session
+max_client_conn = 100
+logfile = pgbouncer.log
+pidfile = pgbouncer.pid
+admin_users = admindb
 ```
 
 # Getting Started
