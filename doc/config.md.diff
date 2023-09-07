@@ -1,0 +1,25 @@
+diff --git a/doc/config.md b/doc/config.md
+index b181730..218cf38 100644
+--- a/doc/config.md
++++ b/doc/config.md
+@@ -131,6 +131,20 @@ the per-database configuration.
+ 
+ Default: 20
+ 
++### polling_frequency
++
++How often to poll the other nodes in a cluster if using the fast switchover feature.
++The query used to poll the nodes is `pg_is_in_recovery()`.
++
++Default: .1 (100ms)
++
++### server_failed_delay
++
++How long to wait between failed attempts to reconnect to a downed node when using fast
++switchovers. This prevents connection storming downed nodes.
++
++Default: 30
++
+ ### min_pool_size
+ 
+ Add more server connections to pool if below this number.

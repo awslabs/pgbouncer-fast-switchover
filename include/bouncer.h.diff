@@ -1,9 +1,8 @@
---- ../pgbouncer/include/bouncer.h	2020-04-26 15:20:51.657323344 -0400
-+++ ./include/bouncer.h	2020-04-26 14:57:50.252491469 -0400
-@@ -97,12 +97,17 @@ typedef union PgAddr PgAddr;
- typedef enum SocketState SocketState;
- typedef struct PktHdr PktHdr;
- typedef struct ScramState ScramState;
+diff --git a/include/bouncer.h b/include/bouncer.h
+index f2c2bac..ddb07fc 100644
+--- a/include/bouncer.h
++++ b/include/bouncer.h
+@@ -99,6 +99,11 @@ typedef struct ScramState ScramState;
  
  extern int cf_sbuf_len;
  
@@ -15,13 +14,52 @@
  #include "util.h"
  #include "iobuf.h"
  #include "sbuf.h"
- #include "pktbuf.h"
- #include "varcache.h"
- #include "dnslookup.h"
-@@ -512,12 +517,17 @@ extern int cf_tcp_user_timeout;
+@@ -374,12 +379,20 @@ struct PgPool {
  
- extern int cf_log_connections;
- extern int cf_log_disconnections;
+ 	/* if last connect to server failed, there should be delay before next */
+ 	usec_t last_connect_time;
++	usec_t last_poll_time;
++	usec_t last_failed_time; // last time the connection failed
+ 	bool last_connect_failed:1;
+ 	bool last_login_failed:1;
+ 
+ 	bool welcome_msg_ready:1;
++	bool recently_checked:1; // should be set once checking starts. If all pools have this set, they need to be unset so we can loop again.
++	bool initial_writer_endpoint:1; // used to indicate a configured writer when starting PgBouncer. Used for getting the topology of the cluster associated with the writer.
+ 
++	uint16_t num_nodes;
+ 	uint16_t rrcounter;		/* round-robin counter */
++
++	PgPool *global_writer;	/* global_writer pool for this pool */;
++	PgPool *parent_pool;	/* the parent pool for setting the global writer */
+ };
+ 
+ /*
+@@ -466,6 +479,7 @@ struct PgDatabase {
+ 	int pool_mode;		/* pool mode for this database */
+ 	int max_db_connections;	/* max server connections between all pools */
+ 	char *connect_query;	/* startup commands to send to server after connect */
++	char *topology_query;	/* command to get topology to determine promoted writer. Also used to indicate whether to use fast_switchovers on a specific node */
+ 
+ 	struct PktBuf *startup_params; /* partial StartupMessage (without user) be sent to server */
+ 	const char *dbname;	/* server-side name, pointer to inside startup_msg */
+@@ -598,6 +612,7 @@ extern int cf_peer_id;
+ extern int cf_pool_mode;
+ extern int cf_max_client_conn;
+ extern int cf_default_pool_size;
++extern usec_t cf_polling_frequency;
+ extern int cf_min_pool_size;
+ extern int cf_res_pool_size;
+ extern usec_t cf_res_pool_timeout;
+@@ -615,6 +630,7 @@ extern int cf_server_reset_query_always;
+ extern char * cf_server_check_query;
+ extern usec_t cf_server_check_delay;
+ extern int cf_server_fast_close;
++extern usec_t cf_server_failed_delay;
+ extern usec_t cf_server_connect_timeout;
+ extern usec_t cf_server_login_retry;
+ extern usec_t cf_query_timeout;
+@@ -667,6 +683,11 @@ extern int cf_log_disconnections;
  extern int cf_log_pooler_errors;
  extern int cf_application_name_add_host;
  
@@ -33,6 +71,3 @@
  extern int cf_client_tls_sslmode;
  extern char *cf_client_tls_protocols;
  extern char *cf_client_tls_ca_file;
- extern char *cf_client_tls_cert_file;
- extern char *cf_client_tls_key_file;
- extern char *cf_client_tls_ciphers;
