@@ -34,6 +34,19 @@ MERGEFILES="\
    src/client.c\
    src/main.c\
    include/bouncer.h\
+   include/janitor.h\
+   include/loader.h\
+   include/objects.h\
+   include/pktbuf.h\
+   include/util.h\
+   src/admin.c\
+   src/janitor.c\
+   src/loader.c\
+   src/objects.c\
+   src/pktbuf.c\
+   src/server.c\
+   src/util.c\
+   doc/config.md\
    "
 for file in $MERGEFILES
 do
@@ -76,7 +89,7 @@ if [ $patchstatus -eq 1 ]; then
    echo "Possible causes: "
    echo "   pgbouncer-rr-patch already installed in target directory?"
    echo "   new version of pgbouncer with changed source files that can't be patched?"
-   echo "      - last tested with pgbouncer v1.12 (April 2020)"
+   echo "      - last tested with pgbouncer v1.19 (September 2023)"
    echo "      - Try getting pgbouncer with: git clone https://github.com/pgbouncer/pgbouncer.git --branch \"stable-1.19\""
    echo "Status: pgbouncer-rr-patch merge FAILED"
 else
