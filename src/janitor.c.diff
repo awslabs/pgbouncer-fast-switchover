@@ -1,5 +1,5 @@
 diff --git a/src/janitor.c b/src/janitor.c
-index 855a4c5..03ffc51 100644
+index 855a4c5..4ac80a8 100644
 --- a/src/janitor.c
 +++ b/src/janitor.c
 @@ -24,6 +24,9 @@
@@ -12,7 +12,7 @@ index 855a4c5..03ffc51 100644
  /* do full maintenance 3x per second */
  static struct timeval full_maint_period = {0, USEC / 3};
  static struct event full_maint_ev;
-@@ -125,21 +128,132 @@ void resume_all(void)
+@@ -125,21 +128,157 @@ void resume_all(void)
  	resume_pooler();
  }
  
@@ -87,6 +87,7 @@ index 855a4c5..03ffc51 100644
 +		update_client_pool(client, global_writer);
 +	} else if (pool->last_connect_failed) {
 +		bool found = false;
++		bool need_to_reconnect = true;
 +		reset_time_cache();
 +		now = get_cached_time();
 +		log_debug("launch_recheck: need to iterate pool list");
@@ -95,27 +96,32 @@ index 855a4c5..03ffc51 100644
 +			next_pool = container_of(item, PgPool, head);
 +
 +			if (!next_pool->parent_pool || next_pool->parent_pool != pool) {
++				log_debug("launch_recheck: no parent pool, skipping: %s", next_pool->db->name);
 +				continue;
 +			}
 +
-+			if (next_pool->last_connect_failed)
++			if (next_pool->last_connect_failed) {
++				log_debug("launch_recheck: last_connect_failed, skipping: %s", next_pool->db->name);
 +				continue;
++			}
++
++			need_to_reconnect = false;
 +
 +			if (next_pool->recently_checked) {
-+				log_debug("pool was recently checked, skipping: %s", next_pool->db->name);
++				log_debug("launch_recheck: pool was recently checked, skipping: %s", next_pool->db->name);
 +				continue;
 +			}
 +
 +			last_poll_time = next_pool->last_poll_time;
 +			difference_in_ms = (now - last_poll_time) / 1000;
-+			log_debug("last time checked for pool %s: now: %llu last: %llu, diff: %llu, polling_freq_max: %llu", next_pool->db->name, now, last_poll_time, difference_in_ms, cf_polling_frequency/1000);
++			log_debug("launch_recheck: last time checked for pool %s: now: %llu last: %llu, diff: %llu, polling_freq_max: %llu", next_pool->db->name, now, last_poll_time, difference_in_ms, cf_polling_frequency/1000);
 +
 +			if (difference_in_ms < polling_freq_in_ms) {
-+				log_debug("skipping because it's too soon for pool %s (%llu ms)", next_pool->db->name, difference_in_ms);
++				log_debug("launch_recheck: skipping because it's too soon for pool %s (%llu ms)", next_pool->db->name, difference_in_ms);
 +				continue;
 +			}
 +
-+			log_debug("found pool during iteration, setting to: %s", next_pool->db->name);
++			log_debug("launch_recheck: found pool during iteration, setting to: %s", next_pool->db->name);
 +
 +			found = update_client_pool(client, next_pool);
 +			if (!found)
@@ -124,7 +130,21 @@ index 855a4c5..03ffc51 100644
 +			break;
 +		}
 +
-+		if (!found) {
++		if (need_to_reconnect && cf_recreate_disconnected_pools) {
++			log_debug("launch_recheck: all pools failed, so need to try to reconnect to parents");
++			statlist_for_each(item, &pool_list) {
++				next_pool = container_of(item, PgPool, head);
++
++				if (!next_pool->parent_pool || next_pool->parent_pool != pool) {
++					continue;
++				}
++
++				log_debug("launch_recheck: establishing new connection to pool: %s", next_pool->db->name);
++				launch_new_connection(next_pool, /* evict_if_needed= */ true);
++			}
++
++			return;
++		} else if (!found) {
 +			log_debug("could not find alternate server, need to reset all pools");
 +			reset_recently_checked();
 +			/* drastically reduces switchover/failover time since we don't need to wait to get called again from per_loop_activate() */
@@ -141,16 +161,22 @@ index 855a4c5..03ffc51 100644
  	while (1) {
 -		server = first_socket(&pool->used_server_list);
 -		if (!server)
+-			return;
 +		server = first_socket(&client->pool->used_server_list);
 +		if (!server) {
-+			// need to reset
-+			client->pool->last_connect_failed = true;
- 			return;
++			log_debug("launch_recheck: could not find used_server for pool: %s", client->pool->db->name);
++
++			/* if a new connection pool was created because all three nodes in the cluster are down, servers are in the idle list instead of used list */
++			server = first_socket(&client->pool->idle_server_list);
++			if (!server) {
++				client->pool->last_connect_failed = true;
++				return;
++			}
 +		}
  		if (server->ready)
  			break;
  		disconnect_server(server, true, "idle server got dirty");
-@@ -155,12 +269,32 @@ static void launch_recheck(PgPool *pool)
+@@ -155,12 +294,32 @@ static void launch_recheck(PgPool *pool)
  	}
  
  	if (need_check) {
@@ -189,7 +215,7 @@ index 855a4c5..03ffc51 100644
  	} else {
  		/* make immediately available */
  		release_server(server);
-@@ -202,11 +336,22 @@ static void per_loop_activate(PgPool *pool)
+@@ -202,11 +361,22 @@ static void per_loop_activate(PgPool *pool)
  			--sv_tested;
  		} else if (sv_used > 0) {
  			/* ask for more connections to be tested */
@@ -214,7 +240,7 @@ index 855a4c5..03ffc51 100644
  			break;
  		}
  	}
-@@ -298,10 +443,7 @@ static int per_loop_wait_close(PgPool *pool)
+@@ -298,10 +468,7 @@ static int per_loop_wait_close(PgPool *pool)
  	return count;
  }
  
@@ -226,7 +252,7 @@ index 855a4c5..03ffc51 100644
  {
  	struct List *item;
  	PgPool *pool;
-@@ -310,6 +452,7 @@ void per_loop_maint(void)
+@@ -310,6 +477,7 @@ void per_loop_maint(void)
  	bool partial_pause = false;
  	bool partial_wait = false;
  	bool force_suspend = false;
@@ -234,7 +260,7 @@ index 855a4c5..03ffc51 100644
  
  	if (cf_pause_mode == P_SUSPEND && cf_suspend_timeout > 0) {
  		usec_t stime = get_cached_time() - g_suspend_start;
-@@ -321,13 +464,32 @@ void per_loop_maint(void)
+@@ -321,13 +489,32 @@ void per_loop_maint(void)
  		pool = container_of(item, PgPool, head);
  		if (pool->db->admin)
  			continue;
@@ -268,7 +294,7 @@ index 855a4c5..03ffc51 100644
  			}
  			break;
  		case P_PAUSE:
-@@ -366,6 +528,27 @@ void per_loop_maint(void)
+@@ -366,6 +553,27 @@ void per_loop_maint(void)
  		admin_wait_close_done();
  }
  
@@ -296,7 +322,15 @@ index 855a4c5..03ffc51 100644
  /* maintaining clients in pool */
  static void pool_client_maint(PgPool *pool)
  {
-@@ -801,6 +984,7 @@ void kill_database(PgDatabase *db)
+@@ -472,6 +680,7 @@ static void check_unused_servers(PgPool *pool, struct StatList *slist, bool idle
+ 		} else if (server->state == SV_USED && !server->ready) {
+ 			disconnect_server(server, true, "SV_USED server got dirty");
+ 		} else if (cf_server_idle_timeout > 0 && idle > cf_server_idle_timeout
++			   && (!pool->db && !pool->db->topology_query)
+ 			   && (pool_min_pool_size(pool) == 0 || pool_connected_server_count(pool) > pool_min_pool_size(pool))) {
+ 			disconnect_server(server, true, "server idle timeout");
+ 		} else if (age >= cf_server_lifetime) {
+@@ -801,6 +1010,7 @@ void kill_database(PgDatabase *db)
  	if (db->forced_user)
  		slab_free(user_cache, db->forced_user);
  	free(db->connect_query);
