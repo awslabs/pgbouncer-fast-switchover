@@ -1,8 +1,8 @@
 diff --git a/doc/config.md b/doc/config.md
-index b181730..218cf38 100644
+index b181730..4872044 100644
 --- a/doc/config.md
 +++ b/doc/config.md
-@@ -131,6 +131,20 @@ the per-database configuration.
+@@ -131,6 +131,28 @@ the per-database configuration.
  
  Default: 20
  
@@ -20,6 +20,28 @@ index b181730..218cf38 100644
 +
 +Default: 30
 +
++### recreate_disconnected_pools
++
++If enabled, and [topology_query](#topology_query) is set for a pool, connections to the pools
++using the topology_query that have been closed will be automatically recreated during
++a failover.
++
++Default: 1 (enabled)
++
  ### min_pool_size
  
  Add more server connections to pool if below this number.
+@@ -1055,6 +1077,13 @@ Query to be executed after a connection is established, but before
+ allowing the connection to be used by any clients. If the query raises errors,
+ they are logged but ignored otherwise.
+ 
++### topology_query
++
++Query to be executed to determine the topology for a multi-node cluster. If set,
++PgBouncer will precreate connection pools to each node in the cluster.
++
++Example: topology_query='select endpoint from rds_tools.show_topology()'
++
+ ### pool_mode
+ 
+ Set the pool mode specific to this database. If not set,

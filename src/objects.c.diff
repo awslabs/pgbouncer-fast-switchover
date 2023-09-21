@@ -1,5 +1,5 @@
 diff --git a/src/objects.c b/src/objects.c
-index ab662b8..bc497bb 100644
+index ab662b8..e073699 100644
 --- a/src/objects.c
 +++ b/src/objects.c
 @@ -643,14 +643,20 @@ PgPool *get_pool(PgDatabase *db, PgUser *user)
@@ -29,7 +29,7 @@ index ab662b8..bc497bb 100644
  	usec_t last_kill = now - pool->last_lifetime_disconnect;
  
 +	// never close the pools when using fast switchovers
-+	if (fast_switchover)
++	if (pool->db && pool->db->topology_query)
 +		return false;
 +
  	if (age < cf_server_lifetime)
