@@ -196,7 +196,7 @@ The following uses default polling times and a `topology_query` configured to wo
 
 ```ini
 [databases]
-postgres = host=writer.cluster-cpkicoma6jyq.us-west-2.rds.amazonaws.com port=5432 user=master password=notaverysecurepassword dbname=postgres topology_query='select endpoint from rds_tools.show_topology()'
+postgres = host=writer.cluster-cpkicoma6jyq.us-west-2.rds.amazonaws.com port=5432 user=master password=notaverysecurepassword dbname=postgres topology_query='select endpoint from rds_tools.show_topology(\'pgbouncer\')'
 
 [pgbouncer]
 listen_addr = *
