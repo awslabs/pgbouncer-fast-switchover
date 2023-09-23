@@ -277,6 +277,69 @@ Example – JDBC driver URL (Redshift driver)
 ```
 jdbc:redshift://pgbouncer-dnshostname:5439/dev
 ```
+## Run a Local Container
+
+There is a [Dockerfile](./Dockerfile.local) to build and run a fast switchover aware PgBouncer. While it can work with any cluster that has a topology metadata table,
+the example configuration is provided to work with [RDS Postgres Multi-AZ with two readable standbys](https://aws.amazon.com/rds/features/multi-az/#Amazon_RDS_Multi-AZ_with_two_readable_standbys).
+
+If not using RDS, ensure that the `topology_query` in the configuration returns the
+topology for your cluster. Here is an example:
+
+```SQL
+postgres=> select * from rds_tools.show_topology('pgbouncer');
+              id               |                                          endpoint                         | port
+-------------------------------+---------------------------------------------------------------------------+------
+ db-ZNHD4Q25OCUDELFUMGH3D6KUTY | persistent-cluster-v2-instance-3.cpkicoma6jyq.us-west-2.rds.amazonaws.com | 5432
+ db-5NZJJM5NH2RXAVCP66XGPCOU5Y | persistent-cluster-v2-instance-2.cpkicoma6jyq.us-west-2.rds.amazonaws.com | 5432
+ db-5XTOYZVCWZK7SMRSBBOOG6JINQ | persistent-cluster-v2-instance-1.cpkicoma6jyq.us-west-2.rds.amazonaws.com | 5432
+(3 rows)
+```
+
+On RDS, ensure the `rds_tools` extension is created before starting the container. The topology is used
+by PgBouncer to pre-create connection pools too all nodes.
+
+```SQL
+postgres=> CREATE EXTENSION rds_tools;
+CREATE EXTENSION
+```
+
+Update the example PgBouncer [configuration](./pgbouncer.ini) to
+point to your multi-node cluster. 
+- Ensure you update your username and password.
+- Search for "change" in the configuration.
+
+Also make credential updates to the [userlist](./userlist.txt). Both of these
+configurations will be bind mounted into the container.
+
+Build the container
+
+```sh
+$ docker build -f Dockerfile.local . -t pgbouncer
+```
+
+Start the container
+
+```sh
+$ docker run -v $(pwd)/pgbouncer.ini:/home/pgbouncer/pgbouncer.ini -v $(pwd)/userlist.txt:/home/pgbouncer/userlist.txt --network host --rm -it pgbouncer /start.sh 
+<snip>
+2023-09-22 20:52:52.649 UTC [9] LOG kernel file descriptor limit: 1024 (hard: 1024); max_client_conn: 100, max expected fd use: 132
+2023-09-22 20:52:52.649 UTC [9] LOG listening on 0.0.0.0:5432
+2023-09-22 20:52:52.649 UTC [9] LOG listening on [::]:5432
+2023-09-22 20:52:52.649 UTC [9] LOG listening on unix:/tmp/.s.PGSQL.5432
+2023-09-22 20:52:52.650 UTC [9] LOG process up: PgBouncer 1.19.1, libevent 2.1.12-stable (epoll), adns: evdns2, tls: OpenSSL 3.0.8 7 Feb 2023
+```
+
+Connect to your instance
+
+```sh
+$ psql -h localhost -p 5432 -U testuser postgres
+Password for user testuser:
+psql (15.0, server 15.4)
+Type "help" for help.
+
+postgres=>
+```
+
 ## Deploy pgbouncer in Elastic Kubernetes Service (EKS)  
 
 ### Dockerization and deployment considerations
