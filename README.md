@@ -329,6 +329,12 @@ $ docker run -v $(pwd)/pgbouncer.ini:/home/pgbouncer/pgbouncer.ini -v $(pwd)/use
 2023-09-22 20:52:52.650 UTC [9] LOG process up: PgBouncer 1.19.1, libevent 2.1.12-stable (epoll), adns: evdns2, tls: OpenSSL 3.0.8 7 Feb 2023
 ```
 
+Optionally, start PgBouncer in verbose mode by setting the `VERBOSE` environment variable
+
+```sh
+$ docker run -e VERBOSE="-vv" ...
+```
+
 Connect to your instance
 
 ```sh

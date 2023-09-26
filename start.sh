@@ -59,4 +59,4 @@ chmod 0600 $INI
 chmod 0600 $USERLIST
 #/pub_metrics.sh &
 #/adaptivepgbouncer.sh &
-pgbouncer $INI
+pgbouncer $INI ${VERBOSE:-}
