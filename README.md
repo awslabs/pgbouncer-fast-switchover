@@ -296,7 +296,7 @@ postgres=> select * from rds_tools.show_topology('pgbouncer');
 ```
 
 On RDS, ensure the `rds_tools` extension is created before starting the container. The topology is used
-by PgBouncer to pre-create connection pools too all nodes.
+by PgBouncer to pre-create connection pools to all nodes.
 
 ```SQL
 postgres=> CREATE EXTENSION rds_tools;
@@ -311,11 +311,65 @@ point to your multi-node cluster.
 Also make credential updates to the [userlist](./userlist.txt). Both of these
 configurations will be bind mounted into the container.
 
+### Directions for RDS Postgres Multi-AZ with two readable standbys on EC2
+
+First, ensure your Postgres cluster with two readable standbys is created and
+the status returns `available`. This ensures the cluster is fully created and will
+accept writes.
+
+```sh
+$ aws rds describe-db-clusters |jq '.DBClusters[] | select(.DBClusterIdentifier == "cluster-name") | .Status'
+"available"
+```
+
+Once your cluster is ready, connect to the writer endpoint and create the `rds_tools` extension.
+
+```sh
+# ensure psql is installed. This was run on an AL2023 EC2 instance.
+$ sudo yum install postgresql15-15.0-1.amzn2023.0.2.x86_64
+
+$ psql -h <your-writer-endpoint> -U master postgres
+Password for user master:
+psql (15.0, server 15.4)
+SSL connection (protocol: TLSv1.2, cipher: ECDHE-RSA-AES256-GCM-SHA384, compression: off)
+Type "help" for help.
+
+postgres=> CREATE EXTENSION IF NOT EXISTS rds_tools;
+CREATE EXTENSION
+```
+
+Set up and install Docker. These directions allow you to run the container
+as the EC2 user.
+
+```sh
+$ sudo yum install docker
+$ sudo usermod -a -G docker ec2-user
+# log in to the new group immediately
+$ newgrp docker
+
+# start docker
+$ sudo systemctl enable --now docker.service
+```
+
+Clone the repository locally
+
+```sh
+$ git clone https://github.com/awslabs/pgbouncer-fast-switchover.git
+$ cd pgbouncer-fast-switchover
+```
+
 Build the container
 
 ```sh
 $ docker build -f Dockerfile.local . -t pgbouncer
 ```
+
+Update pgbouncer.ini to point to your cluster. Modify the following to match your cluster information
+
+- `<change-to-cluster-endpoint>`: this should be the writer endpoint of your cluster. You can get this using the AWS CLI
+and jq: ```aws rds describe-db-clusters |jq '.DBClusters[] | select(.DBClusterIdentifier == "cluster-name") | .Endpoint'```
+- `<change-dbuser>`: the user name you use to connect to your cluster
+- `<change-dbpassword>`: the password you use to connect to your cluster
 
 Start the container
 
@@ -327,13 +381,17 @@ $ docker run -v $(pwd)/pgbouncer.ini:/home/pgbouncer/pgbouncer.ini -v $(pwd)/use
 2023-09-22 20:52:52.649 UTC [9] LOG listening on [::]:5432
 2023-09-22 20:52:52.649 UTC [9] LOG listening on unix:/tmp/.s.PGSQL.5432
 2023-09-22 20:52:52.650 UTC [9] LOG process up: PgBouncer 1.19.1, libevent 2.1.12-stable (epoll), adns: evdns2, tls: OpenSSL 3.0.8 7 Feb 2023
+<snip>
+2023-09-29 17:57:01.966 UTC [9] LOG S-0x1508cc0: test-instance-1/master@172.31.14.107:5432 new connection to server (from 172.31.42.81:35612)
+2023-09-29 17:57:01.972 UTC [9] LOG S-0x1508800: test-instance-3/master@172.31.17.50:5432 new connection to server (from 172.31.42.81:36184)
+2023-09-29 17:57:02.004 UTC [9] LOG S-0x1508cc0: test-instance-1/master@172.31.14.107:5432 SSL established: TLSv1.2/ECDHE-RSA-AES256-GCM-SHA384/ECDH=prime256v1
+2023-09-29 17:57:02.005 UTC [9] LOG S-0x1508800: test-instance-3/master@172.31.17.50:5432 SSL established: TLSv1.2/ECDHE-RSA-AES256-GCM-SHA384/ECDH=prime256v1
+2023-09-29 17:57:02.005 UTC [9] LOG S-0x1508a60: test-instance-2/master@172.31.47.109:5432 new connection to server (from 172.31.42.81:60782)
+2023-09-29 17:57:02.033 UTC [9] LOG S-0x1508a60: test-instance-2/master@172.31.47.109:5432 SSL established: TLSv1.2/ECDHE-RSA-AES256-GCM-SHA384/ECDH=prime256v1
 ```
 
-Optionally, start PgBouncer in verbose mode by setting the `VERBOSE` environment variable
-
-```sh
-$ docker run -e VERBOSE="-vv" ...
-```
+Notice in the output above that connection pools are precreated to your three nodes (`test-instance-{1,2,3}`). Your PgBouncer container is now
+ready to provide fast switchovers.
 
 Connect to your instance
 
