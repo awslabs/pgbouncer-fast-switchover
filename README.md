@@ -393,6 +393,12 @@ $ docker run -v $(pwd)/pgbouncer.ini:/home/pgbouncer/pgbouncer.ini -v $(pwd)/use
 Notice in the output above that connection pools are precreated to your three nodes (`test-instance-{1,2,3}`). Your PgBouncer container is now
 ready to provide fast switchovers.
 
+Optionally, start PgBouncer in verbose mode by setting the `VERBOSE` environment variable
+
+```sh
+$ docker run -e VERBOSE="-vv" ...
+```
+
 Connect to your instance
 
 ```sh
