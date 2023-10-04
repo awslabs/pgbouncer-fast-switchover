@@ -1,13 +1,12 @@
 diff --git a/include/objects.h b/include/objects.h
-index 7f64ce1..1360807 100644
+index 7f64ce1..9737490 100644
 --- a/include/objects.h
 +++ b/include/objects.h
-@@ -32,6 +32,8 @@ extern struct Slab *peer_pool_cache;
+@@ -32,6 +32,7 @@ extern struct Slab *peer_pool_cache;
  extern struct Slab *pool_cache;
  extern struct Slab *user_cache;
  extern struct Slab *iobuf_cache;
 +extern bool fast_switchover;
-+extern bool checking_for_new_writer; // this is linked with server and client so we can communicate when polling is truly done. Used to only allow checking for one node a time.
  
  PgDatabase *find_peer(int peer_id);
  PgDatabase *find_database(const char *name);
