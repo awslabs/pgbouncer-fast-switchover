@@ -1,5 +1,5 @@
 diff --git a/src/main.c b/src/main.c
-index 3fc1a0c..f9164ee 100644
+index 3fc1a0c..dba92f2 100644
 --- a/src/main.c
 +++ b/src/main.c
 @@ -119,7 +119,9 @@ char *cf_auth_dbname;
@@ -60,7 +60,7 @@ index 3fc1a0c..f9164ee 100644
  CF_ABS("server_idle_timeout", CF_TIME_USEC, cf_server_idle_timeout, 0, "600"),
  CF_ABS("server_lifetime", CF_TIME_USEC, cf_server_lifetime, 0, "3600"),
  CF_ABS("server_login_retry", CF_TIME_USEC, cf_server_login_retry, 0, "15"),
-@@ -1040,12 +1057,16 @@ int main(int argc, char *argv[])
+@@ -1040,6 +1057,8 @@ int main(int argc, char *argv[])
  	}
  
  	write_pidfile();
@@ -69,11 +69,3 @@ index 3fc1a0c..f9164ee 100644
  
  	log_info("process up: %s, libevent %s (%s), adns: %s, tls: %s", PACKAGE_STRING,
  		 event_get_version(), event_base_get_method(pgb_event_base), adns_get_backend(),
- 		 tls_backend_version());
- 
- 	sd_notify(0, "READY=1");
-+	if (fast_switchover)
-+		cf_server_check_delay = 0;
- 
- 	/* main loop */
- 	while (cf_shutdown < 2)
