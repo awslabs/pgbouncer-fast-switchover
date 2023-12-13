@@ -223,18 +223,18 @@ sudo yum install libevent-devel openssl-devel python-devel libtool git patch mak
 git clone https://github.com/pgbouncer/pgbouncer.git --branch "stable-1.19"
 
 # download pgbouncer-fast-switchover extensions
-git clone https://github.com/awslabs/pgbouncer-fast-switchover-patch.git
+git clone https://github.com/awslabs/pgbouncer-fast-switchover.git
 
 # merge pgbouncer-fast-switchover extensions into pgbouncer code
-cd pgbouncer-fast-switchover-patch
-./install-pgbouncer-fast-switchover-patch.sh ../pgbouncer
+cd pgbouncer-fast-switchover
+./install-pgbouncer-rr-patch.sh ../pgbouncer
 
 # build and install
 cd ../pgbouncer
 git submodule init
 git submodule update
 ./autogen.sh
-./configure ...
+./configure
 make
 sudo make install
 ``` 
