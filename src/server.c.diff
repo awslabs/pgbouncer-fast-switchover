@@ -1,5 +1,5 @@
 diff --git a/src/server.c b/src/server.c
-index 3b1dc02..bed3a5e 100644
+index 3b1dc02..8eb720a 100644
 --- a/src/server.c
 +++ b/src/server.c
 @@ -26,6 +26,44 @@
@@ -172,7 +172,7 @@ index 3b1dc02..bed3a5e 100644
  
  		/* ErrorResponse and CommandComplete show end of copy mode */
  		if (server->copy_mode) {
-@@ -464,6 +569,31 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
+@@ -464,6 +569,29 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
  	/* data packets, there will be more coming */
  	case 'd':		/* CopyData(F/B) */
  	case 'D':		/* DataRow */
@@ -199,21 +199,19 @@ index 3b1dc02..bed3a5e 100644
 +			server->pool->checking_for_new_writer = false;
 +			free(data);
 +		}
-+	case 't':		/* ParameterDescription */
-+	case 'T':		/* RowDescription */
  		break;
  	}
  	server->idle_tx = idle_tx;
-@@ -551,7 +681,7 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
+@@ -551,7 +679,7 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
  			}
  		}
  	} else {
 -		if (server->state != SV_TESTED) {
-+		if (server->state != SV_TESTED && !server->pool->db->topology_query)
++		if (server->state != SV_TESTED && !server->pool->db->topology_query) {
  			slog_warning(server,
  				     "got packet '%c' from server when not linked",
  				     pkt_desc(pkt));
-@@ -559,6 +689,19 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
+@@ -559,6 +687,19 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
  		sbuf_prepare_skip(sbuf, pkt->len);
  	}
  
@@ -233,7 +231,7 @@ index 3b1dc02..bed3a5e 100644
  	return true;
  }
  
-@@ -673,6 +816,7 @@ bool server_proto(SBuf *sbuf, SBufEvent evtype, struct MBuf *data)
+@@ -673,6 +814,7 @@ bool server_proto(SBuf *sbuf, SBufEvent evtype, struct MBuf *data)
  	bool res = false;
  	PgSocket *server = container_of(sbuf, PgSocket, sbuf);
  	PgPool *pool = server->pool;
@@ -241,7 +239,7 @@ index 3b1dc02..bed3a5e 100644
  	PktHdr pkt;
  	char infobuf[96];
  
-@@ -687,8 +831,18 @@ bool server_proto(SBuf *sbuf, SBufEvent evtype, struct MBuf *data)
+@@ -687,8 +829,18 @@ bool server_proto(SBuf *sbuf, SBufEvent evtype, struct MBuf *data)
  	case SBUF_EV_RECV_FAILED:
  		if (server->state == SV_ACTIVE_CANCEL)
  			disconnect_server(server, false, "successfully sent cancel request");
@@ -261,7 +259,7 @@ index 3b1dc02..bed3a5e 100644
  		break;
  	case SBUF_EV_SEND_FAILED:
  		disconnect_client(server->link, false, "unexpected eof");
-@@ -729,6 +883,10 @@ bool server_proto(SBuf *sbuf, SBufEvent evtype, struct MBuf *data)
+@@ -729,6 +881,10 @@ bool server_proto(SBuf *sbuf, SBufEvent evtype, struct MBuf *data)
  		break;
  	case SBUF_EV_CONNECT_FAILED:
  		Assert(server->state == SV_LOGIN);
