@@ -1,10 +1,10 @@
 diff --git a/src/util.c b/src/util.c
-index 10bd2c3..6940c29 100644
+index ff445fb..37395a6 100644
 --- a/src/util.c
 +++ b/src/util.c
-@@ -26,6 +26,33 @@
- #include <usual/crypto/csrandom.h>
- #include <usual/socket.h>
+@@ -32,6 +32,33 @@
+ #include <openssl/evp.h>
+ #endif
  
 +PgPool *get_global_writer(PgPool *pool)
 +{

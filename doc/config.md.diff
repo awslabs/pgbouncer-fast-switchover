@@ -1,5 +1,5 @@
 diff --git a/doc/config.md b/doc/config.md
-index b181730..4872044 100644
+index 94a1533..caadecb 100644
 --- a/doc/config.md
 +++ b/doc/config.md
 @@ -131,6 +131,28 @@ the per-database configuration.
@@ -31,7 +31,7 @@ index b181730..4872044 100644
  ### min_pool_size
  
  Add more server connections to pool if below this number.
-@@ -1055,6 +1077,13 @@ Query to be executed after a connection is established, but before
+@@ -1209,6 +1231,13 @@ Query to be executed after a connection is established, but before
  allowing the connection to be used by any clients. If the query raises errors,
  they are logged but ignored otherwise.
  

@@ -1,8 +1,8 @@
 diff --git a/src/objects.c b/src/objects.c
-index ab662b8..e073699 100644
+index 3d3702d..609bbc0 100644
 --- a/src/objects.c
 +++ b/src/objects.c
-@@ -643,14 +643,20 @@ PgPool *get_pool(PgDatabase *db, PgUser *user)
+@@ -708,14 +708,20 @@ PgPool *get_pool(PgDatabase *db, PgUser *user)
  {
  	struct List *item;
  	PgPool *pool;
@@ -24,7 +24,7 @@ index ab662b8..e073699 100644
  	}
  
  	return new_pool(db, user);
-@@ -854,6 +860,10 @@ bool life_over(PgSocket *server)
+@@ -1072,6 +1078,10 @@ bool life_over(PgSocket *server)
  	usec_t age = now - server->connect_time;
  	usec_t last_kill = now - pool->last_lifetime_disconnect;
  
@@ -35,7 +35,7 @@ index ab662b8..e073699 100644
  	if (age < cf_server_lifetime)
  		return false;
  
-@@ -1589,6 +1599,8 @@ PgSocket *accept_client(int sock, bool is_unix)
+@@ -1844,6 +1854,8 @@ PgSocket *accept_client(int sock, bool is_unix)
  /* client managed to authenticate, send welcome msg and accept queries */
  bool finish_client_login(PgSocket *client)
  {
@@ -44,7 +44,7 @@ index ab662b8..e073699 100644
  	if (client->db->fake) {
  		if (cf_log_connections)
  			slog_info(client, "login failed: db=%s user=%s", client->db->name, client->login_user->name);
-@@ -1603,6 +1615,21 @@ bool finish_client_login(PgSocket *client)
+@@ -1858,6 +1870,21 @@ bool finish_client_login(PgSocket *client)
  
  	switch (client->state) {
  	case CL_LOGIN:

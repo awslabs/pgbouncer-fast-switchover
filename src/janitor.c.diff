@@ -1,5 +1,5 @@
 diff --git a/src/janitor.c b/src/janitor.c
-index 855a4c5..1e02db8 100644
+index 83a28d5..955b544 100644
 --- a/src/janitor.c
 +++ b/src/janitor.c
 @@ -24,6 +24,8 @@
@@ -208,7 +208,7 @@ index 855a4c5..1e02db8 100644
  	if (need_check) {
  		/* send test query, wait for result */
  		slog_debug(server, "P: checking: %s", q);
-@@ -202,11 +366,22 @@ static void per_loop_activate(PgPool *pool)
+@@ -201,11 +365,22 @@ static void per_loop_activate(PgPool *pool)
  			--sv_tested;
  		} else if (sv_used > 0) {
  			/* ask for more connections to be tested */
@@ -233,7 +233,7 @@ index 855a4c5..1e02db8 100644
  			break;
  		}
  	}
-@@ -298,10 +473,7 @@ static int per_loop_wait_close(PgPool *pool)
+@@ -297,10 +472,7 @@ static int per_loop_wait_close(PgPool *pool)
  	return count;
  }
  
@@ -245,7 +245,7 @@ index 855a4c5..1e02db8 100644
  {
  	struct List *item;
  	PgPool *pool;
-@@ -310,6 +482,7 @@ void per_loop_maint(void)
+@@ -309,6 +481,7 @@ void per_loop_maint(void)
  	bool partial_pause = false;
  	bool partial_wait = false;
  	bool force_suspend = false;
@@ -253,7 +253,7 @@ index 855a4c5..1e02db8 100644
  
  	if (cf_pause_mode == P_SUSPEND && cf_suspend_timeout > 0) {
  		usec_t stime = get_cached_time() - g_suspend_start;
-@@ -321,13 +494,32 @@ void per_loop_maint(void)
+@@ -320,13 +493,32 @@ void per_loop_maint(void)
  		pool = container_of(item, PgPool, head);
  		if (pool->db->admin)
  			continue;
@@ -287,7 +287,7 @@ index 855a4c5..1e02db8 100644
  			}
  			break;
  		case P_PAUSE:
-@@ -366,6 +558,27 @@ void per_loop_maint(void)
+@@ -365,6 +557,27 @@ void per_loop_maint(void)
  		admin_wait_close_done();
  }
  
@@ -315,7 +315,7 @@ index 855a4c5..1e02db8 100644
  /* maintaining clients in pool */
  static void pool_client_maint(PgPool *pool)
  {
-@@ -472,6 +685,7 @@ static void check_unused_servers(PgPool *pool, struct StatList *slist, bool idle
+@@ -471,6 +684,7 @@ static void check_unused_servers(PgPool *pool, struct StatList *slist, bool idle
  		} else if (server->state == SV_USED && !server->ready) {
  			disconnect_server(server, true, "SV_USED server got dirty");
  		} else if (cf_server_idle_timeout > 0 && idle > cf_server_idle_timeout
@@ -323,7 +323,7 @@ index 855a4c5..1e02db8 100644
  			   && (pool_min_pool_size(pool) == 0 || pool_connected_server_count(pool) > pool_min_pool_size(pool))) {
  			disconnect_server(server, true, "server idle timeout");
  		} else if (age >= cf_server_lifetime) {
-@@ -801,6 +1015,7 @@ void kill_database(PgDatabase *db)
+@@ -818,6 +1032,7 @@ void kill_database(PgDatabase *db)
  	if (db->forced_user)
  		slab_free(user_cache, db->forced_user);
  	free(db->connect_query);

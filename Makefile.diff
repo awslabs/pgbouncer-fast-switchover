@@ -1,8 +1,8 @@
 diff --git a/Makefile b/Makefile
-index 00773da..981e06a 100644
+index 5590d94..754cd73 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -21,6 +21,9 @@ pgbouncer_SOURCES = \
+@@ -23,6 +23,9 @@ pgbouncer_SOURCES = \
  	src/server.c \
  	src/stats.c \
  	src/system.c \
@@ -12,7 +12,7 @@ index 00773da..981e06a 100644
  	src/takeover.c \
  	src/util.c \
  	src/varcache.c \
-@@ -47,6 +50,9 @@ pgbouncer_SOURCES = \
+@@ -51,6 +54,9 @@ pgbouncer_SOURCES = \
  	include/server.h \
  	include/stats.h \
  	include/system.h \
@@ -22,17 +22,18 @@ index 00773da..981e06a 100644
  	include/takeover.h \
  	include/util.h \
  	include/varcache.h \
-@@ -59,7 +65,8 @@ pgbouncer_SOURCES = \
- 	include/common/unicode_norm.h \
- 	include/common/unicode_norm_table.h
+@@ -64,8 +70,9 @@ pgbouncer_SOURCES = \
+ 	include/common/unicode_norm_table.h \
+ 	include/common/uthash_lowercase.h
  
--pgbouncer_CPPFLAGS = -Iinclude $(CARES_CFLAGS) $(LIBEVENT_CFLAGS) $(TLS_CPPFLAGS)
 +python_CPPFLAGS = -I/usr/include/python3.9 -I/usr/include/python3.9
 +pgbouncer_CPPFLAGS = -Iinclude $(CARES_CFLAGS) $(LIBEVENT_CFLAGS) $(TLS_CPPFLAGS) $(python_CPPFLAGS)
+ UTHASH = uthash
+-pgbouncer_CPPFLAGS = -Iinclude $(CARES_CFLAGS) $(LIBEVENT_CFLAGS) $(TLS_CPPFLAGS)
+ pgbouncer_CPPFLAGS += -I$(UTHASH)/src
  
  # include libusual sources directly
- AM_FEATURES = libusual
-@@ -71,6 +78,8 @@ dist_doc_DATA = README.md NEWS.md \
+@@ -78,6 +85,8 @@ dist_doc_DATA = README.md NEWS.md \
  	etc/pgbouncer.ini \
  	etc/pgbouncer.service \
  	etc/pgbouncer.socket \
@@ -41,9 +42,9 @@ index 00773da..981e06a 100644
  	etc/userlist.txt
  
  DISTCLEANFILES = config.mak config.status lib/usual/config.h config.log
-@@ -98,8 +107,10 @@ LIBUSUAL_DIST = $(filter-out %/config.h, $(sort $(wildcard \
- 		lib/README lib/COPYRIGHT \
- 		lib/find_modules.sh )))
+@@ -109,8 +118,10 @@ LIBUSUAL_DIST = $(filter-out %/config.h, $(sort $(wildcard \
+ UTHASH_DIST = $(UTHASH)/src/uthash.h \
+               $(UTHASH)/LICENSE
  
 +python_LDFLAGS = -lpthread -ldl -lutil -lm -lpython3.9 -Xlinker -export-dynamic
  pgbouncer_LDFLAGS := $(TLS_LDFLAGS)

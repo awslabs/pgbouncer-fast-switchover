@@ -1,5 +1,5 @@
 diff --git a/include/pktbuf.h b/include/pktbuf.h
-index fbe1fc5..83d9587 100644
+index fc912b3..0755b31 100644
 --- a/include/pktbuf.h
 +++ b/include/pktbuf.h
 @@ -47,6 +47,8 @@ void pktbuf_free(PktBuf *buf);

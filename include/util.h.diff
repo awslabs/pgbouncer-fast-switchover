@@ -1,10 +1,10 @@
 diff --git a/include/util.h b/include/util.h
-index 35a284b..32e9782 100644
+index f46e452..1a6fd45 100644
 --- a/include/util.h
 +++ b/include/util.h
-@@ -19,6 +19,16 @@
- #include <usual/logging.h>
+@@ -20,6 +20,16 @@
  #include <usual/string.h>
+ #include <usual/cfparser.h>
  
 +/*
 + * sets the global writer to NULL for the pool
