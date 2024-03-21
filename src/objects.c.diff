@@ -1,5 +1,5 @@
 diff --git a/src/objects.c b/src/objects.c
-index 3d3702d..609bbc0 100644
+index 3d3702d..bc691d7 100644
 --- a/src/objects.c
 +++ b/src/objects.c
 @@ -708,14 +708,20 @@ PgPool *get_pool(PgDatabase *db, PgUser *user)
@@ -35,7 +35,72 @@ index 3d3702d..609bbc0 100644
  	if (age < cf_server_lifetime)
  		return false;
  
-@@ -1844,6 +1854,8 @@ PgSocket *accept_client(int sock, bool is_unix)
+@@ -1526,6 +1536,8 @@ static void dns_connect(struct PgSocket *server)
+ 	int sa_len;
+ 	int res;
+ 	char *host_copy = NULL;
++	int port = db->port;
++	char *token;	
+ 
+ 	/* host list? */
+ 	if (db->host && strchr(db->host, ',')) {
+@@ -1540,7 +1552,20 @@ static void dns_connect(struct PgSocket *server)
+ 		for (host = strtok(host_copy, ","), n = 0; host; host = strtok(NULL, ","), n++)
+ 			if (server->pool->rrcounter % count == n)
+ 				break;
++		
++		/* if host contains port then change port and remove port part from host */
++		// Use strtok to split the string by ':'
++		token = strtok(input, ":");
++		if (token != NULL) {
++			host = token;
++			token = strtok(NULL, ":");
++			if (token != NULL) {
++				port = atoi(token); // Convert port string to integer
++			}
++		}
++
+ 		Assert(host);
++		Assert(port);
+ 
+ 		server->pool->rrcounter++;
+ 	} else {
+@@ -1559,7 +1584,7 @@ static void dns_connect(struct PgSocket *server)
+ 			goto cleanup;
+ 		}
+ 		snprintf(sa_un.sun_path, sizeof(sa_un.sun_path),
+-			 "%s/.s.PGSQL.%d", unix_dir, db->port);
++			 "%s/.s.PGSQL.%d", unix_dir, port);
+ 		slog_noise(server, "unix socket: %s", sa_un.sun_path);
+ 		if (unix_dir[0] == '@') {
+ 			/*
+@@ -1579,7 +1604,7 @@ static void dns_connect(struct PgSocket *server)
+ 		memset(&sa_in6, 0, sizeof(sa_in6));
+ 		sa_in6.sin6_family = AF_INET6;
+ 		res = inet_pton(AF_INET6, host, &sa_in6.sin6_addr);
+-		sa_in6.sin6_port = htons(db->port);
++		sa_in6.sin6_port = htons(port);
+ 		sa = (struct sockaddr *)&sa_in6;
+ 		sa_len = sizeof(sa_in6);
+ 	} else {/* else try IPv4 */
+@@ -1587,7 +1612,7 @@ static void dns_connect(struct PgSocket *server)
+ 		memset(&sa_in, 0, sizeof(sa_in));
+ 		sa_in.sin_family = AF_INET;
+ 		res = inet_pton(AF_INET, host, &sa_in.sin_addr);
+-		sa_in.sin_port = htons(db->port);
++		sa_in.sin_port = htons(port);
+ 		sa = (struct sockaddr *)&sa_in;
+ 		sa_len = sizeof(sa_in);
+ 	}
+@@ -1606,6 +1631,7 @@ static void dns_connect(struct PgSocket *server)
+ 	connect_server(server, sa, sa_len);
+ cleanup:
+ 	free(host_copy);
++	free(token);
+ }
+ 
+ PgSocket *compare_connections_by_time(PgSocket *lhs, PgSocket *rhs)
+@@ -1844,6 +1870,8 @@ PgSocket *accept_client(int sock, bool is_unix)
  /* client managed to authenticate, send welcome msg and accept queries */
  bool finish_client_login(PgSocket *client)
  {
@@ -44,7 +109,7 @@ index 3d3702d..609bbc0 100644
  	if (client->db->fake) {
  		if (cf_log_connections)
  			slog_info(client, "login failed: db=%s user=%s", client->db->name, client->login_user->name);
-@@ -1858,6 +1870,21 @@ bool finish_client_login(PgSocket *client)
+@@ -1858,6 +1886,21 @@ bool finish_client_login(PgSocket *client)
  
  	switch (client->state) {
  	case CL_LOGIN:
