@@ -1,8 +1,8 @@
 diff --git a/src/loader.c b/src/loader.c
-index 55f87a8..4db4b57 100644
+index be058ce..6202ada 100644
 --- a/src/loader.c
 +++ b/src/loader.c
-@@ -61,12 +61,20 @@ static char *cstr_unquote_value(char *p)
+@@ -54,12 +54,20 @@ static char *cstr_unquote_value(char *p)
  	while (1) {
  		if (!*p)
  			return NULL;
@@ -23,11 +23,10 @@ index 55f87a8..4db4b57 100644
  		*s++ = *p++;
  	}
  	/* terminate actual value */
-@@ -260,6 +268,76 @@ fail:
- 	free(tmp_connstr);
- 	return false;
+@@ -165,6 +173,75 @@ static bool set_autodb(const char *connstr)
+ 	return true;
  }
-+
+ 
 +PgPool *new_pool_from_db(PgDatabase *db, char *dbname, char *hostname)
 +{
 +	PgPool *pool;
@@ -79,14 +78,14 @@ index 55f87a8..4db4b57 100644
 +			goto oom;
 +	}
 +
-+	if (db->forced_user) {
-+		if (!force_user(new_db, db->forced_user->name, db->forced_user->passwd)) {;
++	if (db->forced_user_credentials) {
++		if (!force_user_credentials(new_db, db->forced_user_credentials->name, db->forced_user_credentials->passwd)) {;
 +			goto oom;
 +		}
 +	}
 +
 +	log_debug("creating pool for %s", new_db->name);
-+	pool = get_pool(new_db, new_db->forced_user);
++	pool = get_pool(new_db, new_db->forced_user_credentials);
 +	if (!pool) {
 +		fatal("pool could not be created for %s", new_db->name);
 +		goto oom;
@@ -98,17 +97,17 @@ index 55f87a8..4db4b57 100644
 +}
 +
  /* fill PgDatabase from connstr */
- bool parse_database(void *base, const char *name, const char *connstr)
+ bool parse_peer(void *base, const char *name, const char *connstr)
  {
-@@ -286,6 +364,7 @@ bool parse_database(void *base, const char *name, const char *connstr)
+@@ -269,6 +346,7 @@ bool parse_database(void *base, const char *name, const char *connstr)
  	char *datestyle = NULL;
  	char *timezone = NULL;
  	char *connect_query = NULL;
 +	char *topology_query = NULL;
  	char *appname = NULL;
+ 	char *auth_query = NULL;
  
- 	cv.value_p = &pool_mode;
-@@ -358,11 +437,26 @@ bool parse_database(void *base, const char *name, const char *connstr)
+@@ -344,11 +422,27 @@ bool parse_database(void *base, const char *name, const char *connstr)
  				goto fail;
  			}
  		} else if (strcmp("connect_query", key) == 0) {
@@ -116,6 +115,7 @@ index 55f87a8..4db4b57 100644
 +				log_error("connect_query cannot be used if topology_query is set");
 +				goto fail;
 +			}
++
  			connect_query = strdup(val);
  			if (!connect_query) {
  				log_error("out of memory");
@@ -134,8 +134,8 @@ index 55f87a8..4db4b57 100644
 +			fast_switchover = true;
  		} else if (strcmp("application_name", key) == 0) {
  			appname = val;
- 		} else {
-@@ -400,6 +494,8 @@ bool parse_database(void *base, const char *name, const char *connstr)
+ 		} else if (strcmp("auth_query", key) == 0) {
+@@ -388,6 +482,8 @@ bool parse_database(void *base, const char *name, const char *connstr)
  			changed = true;
  		} else if (!strings_equal(connect_query, db->connect_query)) {
  			changed = true;
@@ -143,24 +143,24 @@ index 55f87a8..4db4b57 100644
 +			changed = true;
  		} else if (!strings_equal(db->auth_dbname, auth_dbname)) {
  			changed = true;
- 		}
-@@ -416,7 +512,9 @@ bool parse_database(void *base, const char *name, const char *connstr)
- 	db->pool_mode = pool_mode;
+ 		} else if (!strings_equal(db->auth_query, auth_query)) {
+@@ -407,7 +503,9 @@ bool parse_database(void *base, const char *name, const char *connstr)
  	db->max_db_connections = max_db_connections;
+ 	db->server_lifetime = server_lifetime;
  	free(db->connect_query);
 +	free(db->topology_query);
  	db->connect_query = connect_query;
 +	db->topology_query = topology_query;
  
- 	if (!set_auth_dbname(db, auth_dbname))
+ 	if (!set_param_value(&db->auth_dbname, auth_dbname))
  		goto fail;
-@@ -476,6 +574,13 @@ bool parse_database(void *base, const char *name, const char *connstr)
+@@ -470,6 +568,13 @@ bool parse_database(void *base, const char *name, const char *connstr)
  	/* remember dbname */
  	db->dbname = (char *)msg->buf + dbname_ofs;
  
 +	log_debug("creating pool for %s", db->name);
-+	if (db->forced_user) {
-+		PgPool *pool = get_pool(db, db->forced_user);
++	if (db->forced_user_credentials) {
++		PgPool *pool = get_pool(db, db->forced_user_credentials);
 +		if (!pool)
 +			fatal("pool could not be created for %s", db->name);
 +	}

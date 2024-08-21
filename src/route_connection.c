@@ -1,12 +1,12 @@
 /*
 Copyright 2015-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
-Licensed under the Amazon Software License (the "License"). 
+Licensed under the Amazon Software License (the "License").
 You may not use this file except in compliance with the License. A copy of the License is located at
 
     http://aws.amazon.com/asl/
 
-or in the "license" file accompanying this file. 
+or in the "license" file accompanying this file.
 This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions and limitations under the License.
 */
 
@@ -57,7 +57,7 @@ bool route_client_connection(PgSocket *client, int in_transaction, PktHdr *pkt) 
 		fatal("Invalid packet type - expected Q or P, got %c", pkt->type);
 	}
 
-	slog_debug(client, "route_client_connection: Username => %s", client->login_user->name);
+	slog_debug(client, "route_client_connection: Username => %s", client->login_user_credentials->name);
 	slog_debug(client, "route_client_connection: Query => %s", query_str);
 
 	if (strcmp(cf_routing_rules_py_module_file, "not_enabled") == 0) {
@@ -66,7 +66,7 @@ bool route_client_connection(PgSocket *client, int in_transaction, PktHdr *pkt) 
 		return true;
 	}
 
-	dbname = pycall(client, client->login_user->name, query_str, in_transaction, cf_routing_rules_py_module_file,
+	dbname = pycall(client, client->login_user_credentials->name, query_str, in_transaction, cf_routing_rules_py_module_file,
 			"routing_rules");
 	if (dbname == NULL) {
 		slog_debug(client, "routing_rules returned 'None' - existing connection preserved");
@@ -82,7 +82,7 @@ bool route_client_connection(PgSocket *client, int in_transaction, PktHdr *pkt) 
 		free(dbname);
 		return false;
 	}
-	pool = get_pool(db, client->login_user);
+	pool = get_pool(db, client->login_user_credentials);
 	if (client->pool != pool) {
 		if (client->link != NULL) {
 			/* release existing server connection back to pool */

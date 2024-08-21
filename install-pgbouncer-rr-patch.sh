@@ -89,8 +89,8 @@ if [ $patchstatus -eq 1 ]; then
    echo "Possible causes: "
    echo "   pgbouncer-rr-patch already installed in target directory?"
    echo "   new version of pgbouncer with changed source files that can't be patched?"
-   echo "      - last tested with pgbouncer v1.19 (September 2023)"
-   echo "      - Try getting pgbouncer with: git clone https://github.com/pgbouncer/pgbouncer.git --branch \"stable-1.19\""
+   echo "      - last tested with pgbouncer v1.23 (August 2024)"
+   echo "      - Try getting pgbouncer with: git clone https://github.com/pgbouncer/pgbouncer.git --branch \"stable-1.23\""
    echo "Status: pgbouncer-rr-patch merge FAILED"
 else
    echo "Status: pgbouncer-rr-patch merge SUCEEDED"

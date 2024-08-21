@@ -219,8 +219,8 @@ Download and install pgbouncer-fast-switchover by running the following commands
 # install required packages - see https://github.com/pgbouncer/pgbouncer#building
 sudo yum install libevent-devel openssl-devel python-devel libtool git patch make -y
 
-# download the latest tested pgbouncer distribution - 1.19
-git clone https://github.com/pgbouncer/pgbouncer.git --branch "stable-1.19"
+# download the latest tested pgbouncer distribution - 1.23
+git clone https://github.com/pgbouncer/pgbouncer.git --branch "stable-1.23"
 
 # download pgbouncer-fast-switchover extensions
 git clone https://github.com/awslabs/pgbouncer-fast-switchover.git
@@ -489,14 +489,14 @@ export BASE_TAG=multiarch-al2
 export BASE_ARM_TAG=arm64
 export BASE_AMD_TAG=amd64
 export PGB_REPO=pgbouncer
-export PGB_TAG=fastswitchover.pg.stable.1.19.multiarch
+export PGB_TAG=fastswitchover.pg.stable.1.23.multiarch
 export PGB_ARM_TAG=arm64
 export PGB_AMD_TAG=amd64
 export GITHUB_OWNER=awslabs
 export GITHUB_BRANCH=ci-build
 export GITHUB_REPO=pgbouncer-fast-switchover
 export PANDOC_VER=3.1.7
-export PGB_GITHUB_BRANCH=stable-1.19
+export PGB_GITHUB_BRANCH=stable-1.23
 ```
 
 NEED Fix 4 :2/ Build pipeline for the base image
