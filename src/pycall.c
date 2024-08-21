@@ -1,12 +1,12 @@
 /*
 Copyright 2015-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
-Licensed under the Amazon Software License (the "License"). 
+Licensed under the Amazon Software License (the "License").
 You may not use this file except in compliance with the License. A copy of the License is located at
 
     http://aws.amazon.com/asl/
 
-or in the "license" file accompanying this file. 
+or in the "license" file accompanying this file.
 This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions and limitations under the License.
 */
 
@@ -44,8 +44,8 @@ char *pycall(PgSocket *client, char *username, char *query_str, int in_transacti
 		ext[0] = '\0';
 
 	/* Initialize the Python interpreter
-	 * NOTE: This call is a no-op on subsequent calls, as we do not 
-	 * call PyFinalize(). This 
+	 * NOTE: This call is a no-op on subsequent calls, as we do not
+	 * call PyFinalize(). This
 	 * a) avoids the overhead of repeatedly reloading the interpreter
 	 * b) allows the use of global variables for persisting data in the
 	 *    routing / rewriting functions between calls.
@@ -140,4 +140,3 @@ char *pycall(PgSocket *client, char *username, char *query_str, int in_transacti
 	Py_XDECREF(pValue);
 	return res;
 }
-

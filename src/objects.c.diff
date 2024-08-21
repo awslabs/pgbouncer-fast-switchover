@@ -1,17 +1,17 @@
 diff --git a/src/objects.c b/src/objects.c
-index ab662b8..e073699 100644
+index 015c3fc..dfed239 100644
 --- a/src/objects.c
 +++ b/src/objects.c
-@@ -643,14 +643,20 @@ PgPool *get_pool(PgDatabase *db, PgUser *user)
+@@ -753,14 +753,20 @@ PgPool *get_pool(PgDatabase *db, PgCredentials *user_credentials)
  {
  	struct List *item;
  	PgPool *pool;
 +	PgPool *global_writer = NULL;
  
- 	if (!db || !user)
+ 	if (!db || !user_credentials)
  		return NULL;
  
- 	list_for_each(item, &user->pool_list) {
+ 	list_for_each(item, &user_credentials->global_user->pool_list) {
  		pool = container_of(item, PgPool, map_head);
 -		if (pool->db == db)
 +		if (pool->db == db) {
@@ -23,19 +23,19 @@ index ab662b8..e073699 100644
 +		}
  	}
  
- 	return new_pool(db, user);
-@@ -854,6 +860,10 @@ bool life_over(PgSocket *server)
- 	usec_t age = now - server->connect_time;
+ 	return new_pool(db, user_credentials);
+@@ -1137,6 +1143,10 @@ bool life_over(PgSocket *server)
  	usec_t last_kill = now - pool->last_lifetime_disconnect;
+ 	usec_t server_lifetime = pool_server_lifetime(pool);
  
 +	// never close the pools when using fast switchovers
 +	if (pool->db && pool->db->topology_query)
 +		return false;
 +
- 	if (age < cf_server_lifetime)
+ 	if (age < server_lifetime)
  		return false;
  
-@@ -1589,6 +1599,8 @@ PgSocket *accept_client(int sock, bool is_unix)
+@@ -1964,6 +1974,8 @@ PgSocket *accept_client(int sock, bool is_unix)
  /* client managed to authenticate, send welcome msg and accept queries */
  bool finish_client_login(PgSocket *client)
  {
@@ -43,8 +43,8 @@ index ab662b8..e073699 100644
 +
  	if (client->db->fake) {
  		if (cf_log_connections)
- 			slog_info(client, "login failed: db=%s user=%s", client->db->name, client->login_user->name);
-@@ -1603,6 +1615,21 @@ bool finish_client_login(PgSocket *client)
+ 			slog_info(client, "login failed: db=%s user=%s", client->db->name, client->login_user_credentials->name);
+@@ -1978,6 +1990,22 @@ bool finish_client_login(PgSocket *client)
  
  	switch (client->state) {
  	case CL_LOGIN:
@@ -56,13 +56,14 @@ index ab662b8..e073699 100644
 +			log_debug("finish_client_login: no topology query, so not using fast switchover");
 +		} else if (global_writer) {
 +			log_debug("finish_client_login: global writer is set, so let's use the cached value: %s", global_writer->db->name);
-+			if (client->pool != global_writer && !set_pool(client, global_writer->db->name, client->login_user->name, client->login_user->passwd, true)) {
++			if (client->pool != global_writer && !set_pool(client, global_writer->db->name, client->login_user_credentials->name, client->login_user_credentials->passwd, true)) {
 +				log_error("could not set pool to: %s", global_writer->db->name);
 +				return false;
 +			}
 +		} else {
 +			log_debug("finish_client_login: done...activating client");
 +		}
++
  		change_client_state(client, CL_ACTIVE);
  	case CL_ACTIVE:
  		break;

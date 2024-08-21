@@ -1,5 +1,5 @@
 diff --git a/src/janitor.c b/src/janitor.c
-index 855a4c5..1e02db8 100644
+index 0bdc729..170853e 100644
 --- a/src/janitor.c
 +++ b/src/janitor.c
 @@ -24,6 +24,8 @@
@@ -11,7 +11,7 @@ index 855a4c5..1e02db8 100644
  /* do full maintenance 3x per second */
  static struct timeval full_maint_period = {0, USEC / 3};
  static struct event full_maint_ev;
-@@ -125,21 +127,158 @@ void resume_all(void)
+@@ -125,21 +127,159 @@ void resume_all(void)
  	resume_pooler();
  }
  
@@ -23,8 +23,8 @@ index 855a4c5..1e02db8 100644
 +	if (client->pool == new_pool)
 +		return true;
 +
-+	username = client->login_user->name;
-+	passwd = client->login_user->passwd;
++	username = client->login_user_credentials->name;
++	passwd = client->login_user_credentials->passwd;
 +	if (!set_pool(client, new_pool->db->name, username, passwd, true)) {
 +		log_error("could not set pool to: %s", new_pool->db->name);
 +		return false;
@@ -114,10 +114,10 @@ index 855a4c5..1e02db8 100644
 +
 +			last_poll_time = next_pool->last_poll_time;
 +			difference_in_ms = (now - last_poll_time) / 1000;
-+			log_debug("launch_recheck: last time checked for pool %s: now: %llu last: %llu, diff: %llu, polling_freq_max: %llu", next_pool->db->name, now, last_poll_time, difference_in_ms, cf_polling_frequency/1000);
++			log_debug("launch_recheck: last time checked for pool %s: now: %lu last: %lu, diff: %lu, polling_freq_max: %lu", next_pool->db->name, now, last_poll_time, difference_in_ms, cf_polling_frequency/1000);
 +
 +			if (difference_in_ms < polling_freq_in_ms) {
-+				log_debug("launch_recheck: skipping because it's too soon for pool %s (%llu ms)", next_pool->db->name, difference_in_ms);
++				log_debug("launch_recheck: skipping because it's too soon for pool %s (%lu ms)", next_pool->db->name, difference_in_ms);
 +				continue;
 +			}
 +
@@ -156,6 +156,7 @@ index 855a4c5..1e02db8 100644
 +			next_pool->recently_checked = true;
 +		}
 +	}
++
  
  	/* find clean server */
  	while (1) {
@@ -176,7 +177,7 @@ index 855a4c5..1e02db8 100644
  		if (server->ready)
  			break;
  		disconnect_server(server, true, "idle server got dirty");
-@@ -154,6 +293,31 @@ static void launch_recheck(PgPool *pool)
+@@ -154,6 +294,32 @@ static void launch_recheck(PgPool *pool)
  			need_check = false;
  	}
  
@@ -205,10 +206,11 @@ index 855a4c5..1e02db8 100644
 +		}
 +	}
 +
++
  	if (need_check) {
  		/* send test query, wait for result */
  		slog_debug(server, "P: checking: %s", q);
-@@ -202,11 +366,22 @@ static void per_loop_activate(PgPool *pool)
+@@ -208,11 +374,21 @@ static void per_loop_activate(PgPool *pool)
  			--sv_tested;
  		} else if (sv_used > 0) {
  			/* ask for more connections to be tested */
@@ -221,7 +223,7 @@ index 855a4c5..1e02db8 100644
 +			log_debug("launch_new_connection because not enough connections. number pools: %d, for: %s", statlist_count(&pool_list), pool->db->name);
 +
 +			if (fast_switchover && pool->db->topology_query &&
-+			 	(!get_global_writer(pool) || pool->last_connect_failed)) {
++				(!get_global_writer(pool) || pool->last_connect_failed)) {
 +				log_debug("launch_new_connection loop: going to try to use pool cache since this pool was a writer: last_connect_failed (%d)",
 +						pool->last_connect_failed);
 +				launch_recheck(pool, client);
@@ -229,11 +231,10 @@ index 855a4c5..1e02db8 100644
 +				log_debug("launch_new_connection loop: need to launch new connection because pool is not already a writer");
 +				launch_new_connection(pool, /* evict_if_needed= */ true);
 +			}
-+
  			break;
  		}
  	}
-@@ -298,10 +473,7 @@ static int per_loop_wait_close(PgPool *pool)
+@@ -304,10 +480,7 @@ static int per_loop_wait_close(PgPool *pool)
  	return count;
  }
  
@@ -245,7 +246,7 @@ index 855a4c5..1e02db8 100644
  {
  	struct List *item;
  	PgPool *pool;
-@@ -310,6 +482,7 @@ void per_loop_maint(void)
+@@ -316,6 +489,7 @@ void per_loop_maint(void)
  	bool partial_pause = false;
  	bool partial_wait = false;
  	bool force_suspend = false;
@@ -253,7 +254,7 @@ index 855a4c5..1e02db8 100644
  
  	if (cf_pause_mode == P_SUSPEND && cf_suspend_timeout > 0) {
  		usec_t stime = get_cached_time() - g_suspend_start;
-@@ -321,13 +494,32 @@ void per_loop_maint(void)
+@@ -327,13 +501,32 @@ void per_loop_maint(void)
  		pool = container_of(item, PgPool, head);
  		if (pool->db->admin)
  			continue;
@@ -287,7 +288,7 @@ index 855a4c5..1e02db8 100644
  			}
  			break;
  		case P_PAUSE:
-@@ -366,6 +558,27 @@ void per_loop_maint(void)
+@@ -372,6 +565,27 @@ void per_loop_maint(void)
  		admin_wait_close_done();
  }
  
@@ -315,17 +316,17 @@ index 855a4c5..1e02db8 100644
  /* maintaining clients in pool */
  static void pool_client_maint(PgPool *pool)
  {
-@@ -472,6 +685,7 @@ static void check_unused_servers(PgPool *pool, struct StatList *slist, bool idle
+@@ -482,6 +696,7 @@ static void check_unused_servers(PgPool *pool, struct StatList *slist, bool idle
  		} else if (server->state == SV_USED && !server->ready) {
  			disconnect_server(server, true, "SV_USED server got dirty");
  		} else if (cf_server_idle_timeout > 0 && idle > cf_server_idle_timeout
 +			   && (pool->db && !pool->db->topology_query)
  			   && (pool_min_pool_size(pool) == 0 || pool_connected_server_count(pool) > pool_min_pool_size(pool))) {
  			disconnect_server(server, true, "server idle timeout");
- 		} else if (age >= cf_server_lifetime) {
-@@ -801,6 +1015,7 @@ void kill_database(PgDatabase *db)
- 	if (db->forced_user)
- 		slab_free(user_cache, db->forced_user);
+ 		} else if (age >= server_lifetime) {
+@@ -846,6 +1061,7 @@ void kill_database(PgDatabase *db)
+ 	if (db->forced_user_credentials)
+ 		slab_free(credentials_cache, db->forced_user_credentials);
  	free(db->connect_query);
 +	free(db->topology_query);
  	if (db->inactive_time) {
