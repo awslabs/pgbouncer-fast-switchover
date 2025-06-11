@@ -1,5 +1,5 @@
 diff --git a/src/janitor.c b/src/janitor.c
-index 855a4c5..1e02db8 100644
+index 5131ea5..88e6fe8 100644
 --- a/src/janitor.c
 +++ b/src/janitor.c
 @@ -24,6 +24,8 @@
@@ -11,7 +11,7 @@ index 855a4c5..1e02db8 100644
  /* do full maintenance 3x per second */
  static struct timeval full_maint_period = {0, USEC / 3};
  static struct event full_maint_ev;
-@@ -125,21 +127,158 @@ void resume_all(void)
+@@ -127,21 +129,158 @@ void resume_all(void)
  	resume_pooler();
  }
  
@@ -23,8 +23,8 @@ index 855a4c5..1e02db8 100644
 +	if (client->pool == new_pool)
 +		return true;
 +
-+	username = client->login_user->name;
-+	passwd = client->login_user->passwd;
++	username = client->login_user_credentials->name;
++	passwd = client->login_user_credentials->passwd;
 +	if (!set_pool(client, new_pool->db->name, username, passwd, true)) {
 +		log_error("could not set pool to: %s", new_pool->db->name);
 +		return false;
@@ -176,7 +176,7 @@ index 855a4c5..1e02db8 100644
  		if (server->ready)
  			break;
  		disconnect_server(server, true, "idle server got dirty");
-@@ -154,6 +293,31 @@ static void launch_recheck(PgPool *pool)
+@@ -156,6 +295,31 @@ static void launch_recheck(PgPool *pool)
  			need_check = false;
  	}
  
@@ -189,7 +189,7 @@ index 855a4c5..1e02db8 100644
 +				return;
 +			}
 +			slog_debug(server, "P: checking: %s (not done polling)", recovery_query);
-+			SEND_generic(res, server, 'Q', "s", recovery_query);
++			SEND_generic(res, server, PqMsg_Query, "s", recovery_query);
 +			if (!res)
 +				disconnect_server(server, false, "pg_is_in_recovery() query failed");
 +			free(recovery_query);
@@ -208,7 +208,7 @@ index 855a4c5..1e02db8 100644
  	if (need_check) {
  		/* send test query, wait for result */
  		slog_debug(server, "P: checking: %s", q);
-@@ -202,11 +366,22 @@ static void per_loop_activate(PgPool *pool)
+@@ -210,11 +374,22 @@ static void per_loop_activate(PgPool *pool)
  			--sv_tested;
  		} else if (sv_used > 0) {
  			/* ask for more connections to be tested */
@@ -233,7 +233,7 @@ index 855a4c5..1e02db8 100644
  			break;
  		}
  	}
-@@ -298,10 +473,7 @@ static int per_loop_wait_close(PgPool *pool)
+@@ -306,10 +481,7 @@ static int per_loop_wait_close(PgPool *pool)
  	return count;
  }
  
@@ -245,7 +245,7 @@ index 855a4c5..1e02db8 100644
  {
  	struct List *item;
  	PgPool *pool;
-@@ -310,6 +482,7 @@ void per_loop_maint(void)
+@@ -318,6 +490,7 @@ void per_loop_maint(void)
  	bool partial_pause = false;
  	bool partial_wait = false;
  	bool force_suspend = false;
@@ -253,7 +253,7 @@ index 855a4c5..1e02db8 100644
  
  	if (cf_pause_mode == P_SUSPEND && cf_suspend_timeout > 0) {
  		usec_t stime = get_cached_time() - g_suspend_start;
-@@ -321,13 +494,32 @@ void per_loop_maint(void)
+@@ -329,13 +502,32 @@ void per_loop_maint(void)
  		pool = container_of(item, PgPool, head);
  		if (pool->db->admin)
  			continue;
@@ -287,7 +287,7 @@ index 855a4c5..1e02db8 100644
  			}
  			break;
  		case P_PAUSE:
-@@ -366,6 +558,27 @@ void per_loop_maint(void)
+@@ -374,6 +566,37 @@ void per_loop_maint(void)
  		admin_wait_close_done();
  }
  
@@ -299,6 +299,16 @@ index 855a4c5..1e02db8 100644
 +	if (!fast_switchover) {
 +		log_debug("database does not have fast_switchovers enabled, so will not precreate pools to nodes");
 +		return;
++	}
++
++	log_debug("creating pool for %s", fast_switchover_db->name);
++	if (fast_switchover_db && fast_switchover_db->forced_user_credentials) {
++		PgPool *pool = get_pool(fast_switchover_db, fast_switchover_db->forced_user_credentials);
++		if (!pool)
++			fatal("pool could not be created for %s", fast_switchover_db->name);
++	} else {
++		fatal("Failed to create a connection pool for database: %s. Username is missing. To enable fast switchover, "
++			   "please provide a user for this database in config.", fast_switchover_db->name);
 +	}
 +
 +	loop_maint(true);
@@ -315,17 +325,17 @@ index 855a4c5..1e02db8 100644
  /* maintaining clients in pool */
  static void pool_client_maint(PgPool *pool)
  {
-@@ -472,6 +685,7 @@ static void check_unused_servers(PgPool *pool, struct StatList *slist, bool idle
+@@ -494,6 +717,7 @@ static void check_unused_servers(PgPool *pool, struct StatList *slist, bool idle
  		} else if (server->state == SV_USED && !server->ready) {
  			disconnect_server(server, true, "SV_USED server got dirty");
  		} else if (cf_server_idle_timeout > 0 && idle > cf_server_idle_timeout
 +			   && (pool->db && !pool->db->topology_query)
  			   && (pool_min_pool_size(pool) == 0 || pool_connected_server_count(pool) > pool_min_pool_size(pool))) {
  			disconnect_server(server, true, "server idle timeout");
- 		} else if (age >= cf_server_lifetime) {
-@@ -801,6 +1015,7 @@ void kill_database(PgDatabase *db)
- 	if (db->forced_user)
- 		slab_free(user_cache, db->forced_user);
+		} else if (age >= server_lifetime) {
+@@ -877,6 +1101,7 @@ void kill_database(PgDatabase *db)
+	if (db->forced_user_credentials)
+		slab_free(credentials_cache, db->forced_user_credentials);
  	free(db->connect_query);
 +	free(db->topology_query);
  	if (db->inactive_time) {
