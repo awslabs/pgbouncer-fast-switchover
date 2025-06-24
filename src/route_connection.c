@@ -23,7 +23,7 @@ This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS O
 char *call_python_routing_rules(PgSocket *client, char *query_str, int in_transaction);
 
 /* route_client_connection:
- *  - applied to packets of type 'Q' (Query) and 'P' (Prepare) only
+ *  - applied to packets of type PqMsg_Query (Query) and PqMsg_Parse (Prepare) only
  *  - apply routing rules to query string contained in the buffer, and determine target database
  *  - locate connection pool for target database to client object, and return
  */
@@ -38,26 +38,26 @@ bool route_client_connection(PgSocket *client, int in_transaction, PktHdr *pkt) 
 	/* extract query string from packet */
 	/* first byte is the packet type (which we already know)
 	 * next 4 bytes is the packet length
-	 * For packet type 'Q', the query string is next
-	 * 	'Q' | int32 len | str query
-	 * For packet type 'P', the query string is after the stmt string
-	 * 	'P' | int32 len | str stmt | str query | int16 numparams | int32 paramoid
+	 * For packet type PqMsg_Query, the query string is next
+	 * 	PqMsg_Query | int32 len | str query
+	 * For packet type PqMsg_Parse, the query string is after the stmt string
+	 * 	PqMsg_Parse | int32 len | str stmt | str query | int16 numparams | int32 paramoid
 	 * (Ref: https://www.pgcon.org/2014/schedule/attachments/330_postgres-for-the-wire.pdf)
 	 */
 
 	pkt_start = (char *) &sbuf->io->buf[sbuf->io->parse_pos];
 	/* printHex(pkt_start, pkt->len); */
 
-	if (pkt->type == 'Q') {
+	if (pkt->type == PqMsg_Query) {
 		query_str = (char *) pkt_start + 5;
-	} else if (pkt->type == 'P') {
+	} else if (pkt->type == PqMsg_Parse) {
 		char *stmt_str = pkt_start + 5;
 		query_str = stmt_str + strlen(stmt_str) + 1;
 	} else {
 		fatal("Invalid packet type - expected Q or P, got %c", pkt->type);
 	}
 
-	slog_debug(client, "route_client_connection: Username => %s", client->login_user->name);
+	slog_debug(client, "route_client_connection: Username => %s", client->login_user_credentials->name);
 	slog_debug(client, "route_client_connection: Query => %s", query_str);
 
 	if (strcmp(cf_routing_rules_py_module_file, "not_enabled") == 0) {
@@ -66,7 +66,7 @@ bool route_client_connection(PgSocket *client, int in_transaction, PktHdr *pkt) 
 		return true;
 	}
 
-	dbname = pycall(client, client->login_user->name, query_str, in_transaction, cf_routing_rules_py_module_file,
+	dbname = pycall(client, client->login_user_credentials->name, query_str, in_transaction, cf_routing_rules_py_module_file,
 			"routing_rules");
 	if (dbname == NULL) {
 		slog_debug(client, "routing_rules returned 'None' - existing connection preserved");
@@ -82,7 +82,7 @@ bool route_client_connection(PgSocket *client, int in_transaction, PktHdr *pkt) 
 		free(dbname);
 		return false;
 	}
-	pool = get_pool(db, client->login_user);
+	pool = get_pool(db, client->login_user_credentials);
 	if (client->pool != pool) {
 		if (client->link != NULL) {
 			/* release existing server connection back to pool */

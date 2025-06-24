@@ -1,10 +1,10 @@
 diff --git a/src/server.c b/src/server.c
-index 46db05a..f53d3b6 100644
+index 4a4bbb7..7632738 100644
 --- a/src/server.c
 +++ b/src/server.c
-@@ -22,6 +22,44 @@
+@@ -27,6 +27,44 @@
  
- #include "bouncer.h"
+ #define ERRCODE_CANNOT_CONNECT_NOW "57P03"
  
 +/*
 +* Returns the query data from the server. This must be freed.
@@ -47,8 +47,8 @@ index 46db05a..f53d3b6 100644
  static bool load_parameter(PgSocket *server, PktHdr *pkt, bool startup)
  {
  	const char *key, *val;
-@@ -92,6 +130,8 @@ static bool handle_server_startup(PgSocket *server, PktHdr *pkt)
- 	SBuf *sbuf = &server->sbuf;
+@@ -122,6 +160,8 @@ static bool handle_server_startup(PgSocket *server, PktHdr *pkt)
+	const char *msg;
  	bool res = false;
  	const uint8_t *ckey;
 +	char *data = NULL;
@@ -56,27 +56,28 @@ index 46db05a..f53d3b6 100644
  
  	if (incomplete_pkt(pkt)) {
  		disconnect_server(server, true, "partial pkt in login phase");
-@@ -102,11 +142,15 @@ static bool handle_server_startup(PgSocket *server, PktHdr *pkt)
- 	if (server->exec_on_connect) {
+@@ -133,12 +173,16 @@ static bool handle_server_startup(PgSocket *server, PktHdr *pkt)
  		switch (pkt->type) {
- 		case 'Z':
-+		case 'D':
- 		case 'S':	/* handle them below */
+		case PqMsg_ReadyForQuery:
+		case PqMsg_ParameterStatus:
++		case PqMsg_DataRow:
+			/* handle them below */
  			break;
- 
- 		case 'E':	/* log & ignore errors */
+
+		case PqMsg_ErrorResponse:
+			/* log & ignore errors */
  			log_server_error("S: error while executing exec_on_query", pkt);
 +			// require topology table to exist in the cluster if using
 +			if (fast_switchover)
 +				fatal("does the topology table exist?");
- 			/* fallthrough */
+		/* fallthrough */
  		default:	/* ignore rest */
  			sbuf_prepare_skip(sbuf, pkt->len);
-@@ -120,6 +164,38 @@ static bool handle_server_startup(PgSocket *server, PktHdr *pkt)
+@@ -152,6 +196,38 @@ static bool handle_server_startup(PgSocket *server, PktHdr *pkt)
  		disconnect_server(server, true, "unknown pkt from server");
  		break;
  
-+	case 'D':       /* DataRow */
++	case PqMsg_DataRow:
 +		if (fast_switchover && server->pool->db->topology_query && server->pool->initial_writer_endpoint) {
 +			data = query_data(pkt);
 +			log_debug("got initial data: %s", data);
@@ -107,18 +108,18 @@ index 46db05a..f53d3b6 100644
 +
 +		sbuf_prepare_skip(sbuf, pkt->len);
 +		return true;
-+		break;
- 	case 'E':		/* ErrorResponse */
- 		if (!server->pool->welcome_msg_ready)
- 			kill_pool_logins_server_error(server->pool, pkt);
-@@ -152,8 +228,20 @@ static bool handle_server_startup(PgSocket *server, PktHdr *pkt)
++
+	case PqMsg_ErrorResponse:
+		/*
+		 * If we cannot log into the server, then we drop all clients
+@@ -201,8 +277,20 @@ static bool handle_server_startup(PgSocket *server, PktHdr *pkt)
  			if (!res)
  				disconnect_server(server, false, "exec_on_connect query failed");
  			break;
 +		} else if (fast_switchover && server->pool->db->topology_query && server->pool->initial_writer_endpoint) {
 +			server->exec_on_connect = true;
 +			slog_debug(server, "server connect ok, send topology_query: %s", server->pool->db->topology_query);
-+			SEND_generic(res, server, 'Q', "s", server->pool->db->topology_query);
++			SEND_generic(res, server, PqMsg_Query, "s", server->pool->db->topology_query);
 +			if (!res)
 +				disconnect_server(server, false, "exec_on_connect query failed");
 +			break;
@@ -132,18 +133,18 @@ index 46db05a..f53d3b6 100644
  		/* login ok */
  		slog_debug(server, "server login ok, start accepting queries");
  		server->ready = true;
-@@ -250,6 +338,7 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
- 	SBuf *sbuf = &server->sbuf;
- 	PgSocket *client = server->link;
+@@ -363,6 +451,7 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
  	bool async_response = false;
+	struct List *item, *tmp;
+	bool ignore_packet = false;
 +	bool res = false;
  
  	Assert(!server->pool->db->admin);
  
-@@ -261,6 +350,15 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
+@@ -374,6 +463,15 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
  
  	/* pooling decisions will be based on this packet */
- 	case 'Z':		/* ReadyForQuery */
+	case PqMsg_ReadyForQuery:
 +		/*
 +		 * Discard topology data without sending to the client is finished. Resume regular
 +		 * client/server communication.
@@ -156,10 +157,10 @@ index 46db05a..f53d3b6 100644
  
  		/* if partial pkt, wait */
  		if (!mbuf_get_char(&pkt->data, &state))
-@@ -318,6 +416,13 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
- 		}
- 		/* fallthrough */
- 	case 'C':		/* CommandComplete */
+@@ -461,6 +559,14 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
+		break;
+
+	case PqMsg_CommandComplete:
 +		/*
 +		 * In the process of discarding topology data without sending to the client.
 +		 */
@@ -167,13 +168,14 @@ index 46db05a..f53d3b6 100644
 +			sbuf_prepare_skip(sbuf, pkt->len);
 +			return true;
 +		}
- 
++
  		/* ErrorResponse and CommandComplete show end of copy mode */
  		if (server->copy_mode) {
-@@ -358,6 +463,29 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
+			slog_debug(server, "COPY finished");
+@@ -545,6 +651,29 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
  	/* data packets, there will be more coming */
- 	case 'd':		/* CopyData(F/B) */
- 	case 'D':		/* DataRow */
+	case PqMsg_CopyData:
+	case PqMsg_DataRow:
 +		/*
 +		 * These are the rows returned from the topology query that are discarded.
 +		 */
@@ -197,18 +199,19 @@ index 46db05a..f53d3b6 100644
 +			server->pool->checking_for_new_writer = false;
 +			free(data);
 +		}
- 	case 't':		/* ParameterDescription */
- 	case 'T':		/* RowDescription */
  		break;
-@@ -418,13 +546,26 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
+	}
+	server->idle_tx = idle_tx;
+@@ -632,7 +761,7 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
  			}
  		}
  	} else {
--		if (server->state != SV_TESTED)
-+		if (server->state != SV_TESTED && !server->pool->db->topology_query)
+-		if (server->state != SV_TESTED) {
++		if (server->state != SV_TESTED && !server->pool->db->topology_query) {
  			slog_warning(server,
  				     "got packet '%c' from server when not linked",
  				     pkt_desc(pkt));
+@@ -640,6 +769,19 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
  		sbuf_prepare_skip(sbuf, pkt->len);
  	}
  
@@ -220,15 +223,15 @@ index 46db05a..f53d3b6 100644
 +		server->pool->collect_datarows = true;
 +		server->pool->refresh_topology = false;
 +
-+		SEND_generic(res, server, 'Q', "s", server->pool->db->topology_query);
++		SEND_generic(res, server, PqMsg_Query, "s", server->pool->db->topology_query);
 +		if (!res)
 +			disconnect_server(server, false, "exec_on_connect query failed");
-+	}
++		}
 +
  	return true;
  }
  
-@@ -538,6 +679,7 @@ bool server_proto(SBuf *sbuf, SBufEvent evtype, struct MBuf *data)
+@@ -754,6 +896,7 @@ bool server_proto(SBuf *sbuf, SBufEvent evtype, struct MBuf *data)
  	bool res = false;
  	PgSocket *server = container_of(sbuf, PgSocket, sbuf);
  	PgPool *pool = server->pool;
@@ -236,7 +239,7 @@ index 46db05a..f53d3b6 100644
  	PktHdr pkt;
  	char infobuf[96];
  
-@@ -552,8 +694,18 @@ bool server_proto(SBuf *sbuf, SBufEvent evtype, struct MBuf *data)
+@@ -768,8 +911,18 @@ bool server_proto(SBuf *sbuf, SBufEvent evtype, struct MBuf *data)
  	case SBUF_EV_RECV_FAILED:
  		if (server->state == SV_ACTIVE_CANCEL)
  			disconnect_server(server, false, "successfully sent cancel request");
@@ -256,7 +259,7 @@ index 46db05a..f53d3b6 100644
  		break;
  	case SBUF_EV_SEND_FAILED:
  		disconnect_client(server->link, false, "unexpected eof");
-@@ -593,6 +745,10 @@ bool server_proto(SBuf *sbuf, SBufEvent evtype, struct MBuf *data)
+@@ -810,6 +963,10 @@ bool server_proto(SBuf *sbuf, SBufEvent evtype, struct MBuf *data)
  		break;
  	case SBUF_EV_CONNECT_FAILED:
  		Assert(server->state == SV_LOGIN);

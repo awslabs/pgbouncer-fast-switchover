@@ -35,7 +35,7 @@ char *tag_rewritten(char *query);
 bool is_rewritten(char *query);
 
 /* rewrite_query:
- * applied to packets of type 'Q' (Query) and 'P' (Prepare) only
+ * applied to packets of type PqMsg_Query (Query) and PqMsg_Parse (Prepare) only
  */
 bool rewrite_query(PgSocket *client, int in_transaction, PktHdr *pkt) {
 	SBuf *sbuf = &client->sbuf;
@@ -59,20 +59,20 @@ bool rewrite_query(PgSocket *client, int in_transaction, PktHdr *pkt) {
 	/* extract query string from packet */
 	/* first byte is the packet type (which we already know)
 	 * next 4 bytes is the packet length
-	 * For packet type 'Q', the query string is next
-	 * 	'Q' | int32 len | str query
-	 * For packet type 'P', the query string is after the stmt string
-	 * 	'P' | int32 len | str stmt | str query | int16 numparams | int32 paramoid
+	 * For packet type PqMsg_Query, the query string is next
+	 * 	PqMsg_Query | int32 len | str query
+	 * For packet type PqMsg_Parse, the query string is after the stmt string
+	 * 	PqMsg_Parse | int32 len | str stmt | str query | int16 numparams | int32 paramoid
 	 * (Ref: https://www.pgcon.org/2014/schedule/attachments/330_postgres-for-the-wire.pdf)
 	 */
 	pkt_start = (char *) &sbuf->io->buf[sbuf->io->parse_pos];
-	if (pkt->type == 'Q') {
+	if (pkt->type == PqMsg_Query) {
 		query_str = (char *) pkt_start + 5;
-	} else if (pkt->type == 'P') {
+	} else if (pkt->type == PqMsg_Parse) {
 		stmt_str = pkt_start + 5;
 		query_str = stmt_str + strlen(stmt_str) + 1;
 	} else {
-		fatal("Invalid packet type - expected Q or P, got %c", pkt->type);
+		fatal("Invalid packet type - expected PqMsg_Query or PqMsg_Parse, got %c", pkt->type);
 	}
 
 	/* don't process same query again */
@@ -80,13 +80,13 @@ bool rewrite_query(PgSocket *client, int in_transaction, PktHdr *pkt) {
 
     if (unlikely(cf_verbose > 0)) {
 	    loggable_query_str = strip_newlines(query_str) ;
-	    slog_debug(client, "rewrite_query: Username => %s", client->login_user->name);
+	    slog_debug(client, "rewrite_query: Username => %s", client->login_user_credentials->name);
 	    slog_debug(client, "rewrite_query: Orig Query=> %s", loggable_query_str);
 	    free(loggable_query_str);
 	}
 
 	/* call python function to rewrite the query */
-	tmp_new_query_str = pycall(client, client->login_user->name, query_str, in_transaction, cf_rewrite_query_py_module_file,
+	tmp_new_query_str = pycall(client, client->login_user_credentials->name, query_str, in_transaction, cf_rewrite_query_py_module_file,
 			"rewrite_query");
 	if (tmp_new_query_str == NULL) {
 		slog_debug(client, "query unchanged");
@@ -129,7 +129,7 @@ bool rewrite_query(PgSocket *client, int in_transaction, PktHdr *pkt) {
 	new_io_buf[i++] = (new_pkt_len >> 8) & 255;
 	new_io_buf[i++] = new_pkt_len & 255;
 	/* statement str - for type P */
-	if (pkt->type == 'P') {
+	if (pkt->type == PqMsg_Parse) {
 		strcpy(&new_io_buf[i], stmt_str);
 		i += strlen(stmt_str) + 1;
 	}

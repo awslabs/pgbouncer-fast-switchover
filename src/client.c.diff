@@ -1,39 +1,25 @@
 diff --git a/src/client.c b/src/client.c
-index 464d78d..ff64c08 100644
+index fcf7b3b..9cf3b86 100644
 --- a/src/client.c
 +++ b/src/client.c
-@@ -585,10 +585,10 @@ static bool decide_startup_pool(PgSocket *client, PktHdr *pkt)
- 		} else if (strcmp(key, "application_name") == 0) {
- 			set_appname(client, val);
- 			appname_found = true;
--		} else if (varcache_set(&client->vars, key, val)) {
--			slog_debug(client, "got var: %s=%s", key, val);
- 		} else if (strlist_contains(cf_ignore_startup_params, key)) {
- 			slog_debug(client, "ignoring startup parameter: %s=%s", key, val);
-+		} else if (varcache_set(&client->vars, key, val)) {
-+			slog_debug(client, "got var: %s=%s", key, val);
- 		} else {
- 			slog_warning(client, "unsupported startup parameter: %s=%s", key, val);
- 			disconnect_client(client, true, "unsupported startup parameter: %s", key);
-@@ -798,7 +798,7 @@ static bool handle_client_startup(PgSocket *client, PktHdr *pkt)
+@@ -1291,7 +1291,7 @@ static bool handle_client_startup(PgSocket *client, PktHdr *pkt)
  			return false;
  		}
  
--		if (client->pool && !client->wait_for_user_conn && !client->wait_for_user) {
-+		if (client->pool && !client->wait_for_user_conn && !client->wait_for_user && !get_global_writer(client->pool)) {
+-		if (client->pool && !sending_auth_query(client)) {
++		if (client->pool && !sending_auth_query(client) && !get_global_writer(client->pool)) {
  			disconnect_client(client, true, "client re-sent startup pkt");
  			return false;
  		}
-@@ -923,7 +923,7 @@ static bool handle_client_startup(PgSocket *client, PktHdr *pkt)
- static bool handle_client_work(PgSocket *client, PktHdr *pkt)
- {
- 	SBuf *sbuf = &client->sbuf;
--	int rfq_delta = 0;
-+	int rfq_delta = 0, in_transaction;
+@@ -1428,6 +1428,7 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
+	int track_outstanding = false;
+	PreparedStatementAction ps_action = PS_IGNORE;
+	PgClosePacket close_packet;
++	bool in_transaction = false;
  
  	switch (pkt->type) {
- 
-@@ -980,8 +980,11 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
+	/* one-packet queries */
+@@ -1591,8 +1592,11 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
  		client->query_start = get_cached_time();
  	}
  
@@ -46,12 +32,12 @@ index 464d78d..ff64c08 100644
  		client->pool->stats.xact_count++;
  		client->xact_start = client->query_start;
  	}
-@@ -989,6 +992,14 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
+@@ -1600,6 +1604,14 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
  	if (client->pool->db->admin)
  		return admin_handle_client(client, pkt);
  
 +	/* pgbouncer-rr extensions: query rewrite & client connection routing */
-+	if (pkt->type == 'Q' || pkt->type == 'P') {
++	if (pkt->type == PqMsg_Query || pkt->type == PqMsg_Parse) {
 +		if (!rewrite_query(client, in_transaction, pkt)) {
 +			return false;
 +		}

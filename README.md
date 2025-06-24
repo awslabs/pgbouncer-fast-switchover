@@ -219,8 +219,11 @@ Download and install pgbouncer-fast-switchover by running the following commands
 # install required packages - see https://github.com/pgbouncer/pgbouncer#building
 sudo yum install libevent-devel openssl-devel python-devel libtool git patch make -y
 
-# download the latest tested pgbouncer distribution - 1.19
-git clone https://github.com/pgbouncer/pgbouncer.git --branch "stable-1.19"
+# download the latest tested pgbouncer distribution - 1.24
+git clone https://github.com/pgbouncer/pgbouncer.git
+cd pgbouncer
+git checkout -b pgbouncer-1.24 tags/pgbouncer_1_24_1
+cd ..
 
 # download pgbouncer-fast-switchover extensions
 git clone https://github.com/awslabs/pgbouncer-fast-switchover.git
@@ -380,7 +383,7 @@ $ docker run -v $(pwd)/pgbouncer.ini:/home/pgbouncer/pgbouncer.ini -v $(pwd)/use
 2023-09-22 20:52:52.649 UTC [9] LOG listening on 0.0.0.0:5432
 2023-09-22 20:52:52.649 UTC [9] LOG listening on [::]:5432
 2023-09-22 20:52:52.649 UTC [9] LOG listening on unix:/tmp/.s.PGSQL.5432
-2023-09-22 20:52:52.650 UTC [9] LOG process up: PgBouncer 1.19.1, libevent 2.1.12-stable (epoll), adns: evdns2, tls: OpenSSL 3.0.8 7 Feb 2023
+2023-09-22 20:52:52.650 UTC [9] LOG process up: PgBouncer 1.24.1, libevent 2.1.12-stable (epoll), adns: evdns2, tls: OpenSSL 3.0.8 7 Feb 2023
 <snip>
 2023-09-29 17:57:01.966 UTC [9] LOG S-0x1508cc0: test-instance-1/master@172.31.14.107:5432 new connection to server (from 172.31.42.81:35612)
 2023-09-29 17:57:01.972 UTC [9] LOG S-0x1508800: test-instance-3/master@172.31.17.50:5432 new connection to server (from 172.31.42.81:36184)
@@ -489,14 +492,14 @@ export BASE_TAG=multiarch-al2
 export BASE_ARM_TAG=arm64
 export BASE_AMD_TAG=amd64
 export PGB_REPO=pgbouncer
-export PGB_TAG=fastswitchover.pg.stable.1.19.multiarch
+export PGB_TAG=fastswitchover.pg.stable.1.24.multiarch
 export PGB_ARM_TAG=arm64
 export PGB_AMD_TAG=amd64
 export GITHUB_OWNER=awslabs
 export GITHUB_BRANCH=ci-build
 export GITHUB_REPO=pgbouncer-fast-switchover
 export PANDOC_VER=3.1.7
-export PGB_GITHUB_BRANCH=stable-1.19
+export PGB_GITHUB_BRANCH=pgbouncer-1.24
 ```
 
 NEED Fix 4 :2/ Build pipeline for the base image
