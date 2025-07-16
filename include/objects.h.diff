@@ -1,14 +1,18 @@
 diff --git a/include/objects.h b/include/objects.h
-index 0b498dd..7fe471d 100644
+index 0b498dd..732dab3 100644
 --- a/include/objects.h
 +++ b/include/objects.h
-@@ -37,6 +37,9 @@ extern struct Slab *outstanding_request_cache;
+@@ -37,6 +37,13 @@ extern struct Slab *outstanding_request_cache;
  extern struct Slab *var_list_cache;
  extern struct Slab *server_prepared_statement_cache;
  extern PgPreparedStatement *prepared_statements;
 +extern bool fast_switchover;
++/* Stores the new port number set by customer for the green (target) instance during Blue-Green Deployment fast switchover. */
++extern int updated_target_port_num;
++/* Tracks whether traffic has been successfully routed to the green (target) instance during Blue Green Deployment fast switchover. */
++extern bool routing_traffic_to_target_complete;
 +/* Store the database info from PgBouncer config to support fast switchover. */
 +extern PgDatabase *fast_switchover_db;
-
+ 
  extern unsigned long long int last_pgsocket_id;
  

@@ -1,8 +1,8 @@
 diff --git a/src/janitor.c b/src/janitor.c
-index 5131ea5..c39e84c 100644
+index 5131ea5..0c93e5a 100644
 --- a/src/janitor.c
 +++ b/src/janitor.c
-@@ -24,6 +24,8 @@
+@@ -24,9 +24,15 @@
  
  #include <usual/slab.h>
  
@@ -11,7 +11,14 @@ index 5131ea5..c39e84c 100644
  /* do full maintenance 3x per second */
  static struct timeval full_maint_period = {0, USEC / 3};
  static struct event full_maint_ev;
-@@ -127,21 +129,159 @@ void resume_all(void)
++/* Event used to periodically check Blue-Green topology status */
++static struct event blue_green_topology_check_ev;
++/* Time interval for Blue-Green topology monitoring */
++static struct timeval blue_green_topology_monitoring_interval;
+ extern bool any_user_level_server_timeout_set;
+ extern bool any_user_level_client_timeout_set;
+ 
+@@ -127,21 +133,159 @@ void resume_all(void)
  	resume_pooler();
  }
  
@@ -177,7 +184,7 @@ index 5131ea5..c39e84c 100644
  		if (server->ready)
  			break;
  		disconnect_server(server, true, "idle server got dirty");
-@@ -156,6 +296,36 @@ static void launch_recheck(PgPool *pool)
+@@ -156,6 +300,36 @@ static void launch_recheck(PgPool *pool)
  			need_check = false;
  	}
  
@@ -214,7 +221,7 @@ index 5131ea5..c39e84c 100644
  	if (need_check) {
  		/* send test query, wait for result */
  		slog_debug(server, "P: checking: %s", q);
-@@ -210,11 +380,22 @@ static void per_loop_activate(PgPool *pool)
+@@ -210,11 +384,22 @@ static void per_loop_activate(PgPool *pool)
  			--sv_tested;
  		} else if (sv_used > 0) {
  			/* ask for more connections to be tested */
@@ -239,7 +246,7 @@ index 5131ea5..c39e84c 100644
  			break;
  		}
  	}
-@@ -306,10 +487,7 @@ static int per_loop_wait_close(PgPool *pool)
+@@ -306,10 +491,7 @@ static int per_loop_wait_close(PgPool *pool)
  	return count;
  }
  
@@ -251,7 +258,7 @@ index 5131ea5..c39e84c 100644
  {
  	struct List *item;
  	PgPool *pool;
-@@ -318,6 +496,7 @@ void per_loop_maint(void)
+@@ -318,6 +500,7 @@ void per_loop_maint(void)
  	bool partial_pause = false;
  	bool partial_wait = false;
  	bool force_suspend = false;
@@ -259,7 +266,7 @@ index 5131ea5..c39e84c 100644
  
  	if (cf_pause_mode == P_SUSPEND && cf_suspend_timeout > 0) {
  		usec_t stime = get_cached_time() - g_suspend_start;
-@@ -329,13 +508,32 @@ void per_loop_maint(void)
+@@ -329,13 +512,40 @@ void per_loop_maint(void)
  		pool = container_of(item, PgPool, head);
  		if (pool->db->admin)
  			continue;
@@ -274,6 +281,14 @@ index 5131ea5..c39e84c 100644
 +			if (fast_switchover && pool->last_connect_failed && get_global_writer(pool)) {
 +				if (now - pool->last_failed_time > cf_server_failed_delay) {
 +					log_debug("last connect failed: %s, so launching new connection in per_loop_maint", pool->db->name);
++					if (routing_traffic_to_target_complete && updated_target_port_num !=0 && updated_target_port_num != pool->db->port) {
++						/*
++						 * We are here because the customer changed the green instance's port before the switchover.
++						 * Since traffic has now switched to the new target (which was previously green),
++						 * we need to update the pool's port to the new value before attempting a connection.
++						 */
++						pool->db->port = updated_target_port_num;
++					}
 +					launch_new_connection(pool, true);
 +				}
 +			}
@@ -293,10 +308,117 @@ index 5131ea5..c39e84c 100644
  			}
  			break;
  		case P_PAUSE:
-@@ -374,6 +572,37 @@ void per_loop_maint(void)
+@@ -374,6 +584,148 @@ void per_loop_maint(void)
  		admin_wait_close_done();
  }
  
++/**
++ * @brief Executes topology query on Blue-Green source instance to monitor deployment status.
++ *
++ * This event callback function performs topology checks by:
++ * - Finding the source (blue) instance in the pool list
++ * - Running topology query on an available server connection
++ * - Using either idle or active server connections
++ *
++ * Checks are skipped if:
++ * - Fast switchover is disabled (also removes event)
++ * - A check is already running (prevents concurrent execution)
++ * - Pool has no topology or recovery query configured
++ * - Pool is not a Blue-Green source instance
++ * - No server connections are available
++ *
++ * @note Sets is_topology_check_in_progress flag before executing query
++ * @note Disconnects server if query send fails
++ */
++static void do_topology_check(evutil_socket_t sock, short flags, void *arg)
++{
++	struct List *item;
++	PgPool *pool;
++	PgSocket *server;
++	bool res = true;
++	static bool is_running = false;
++
++	if (!fast_switchover) {
++		event_del(&blue_green_topology_check_ev);
++		return;
++	}
++
++	/* Avoid running multiple checks simultaneously */
++	if (is_running)
++		return;
++
++	is_running = true;
++
++	/* Iterate through pools to find the global writer */
++	statlist_for_each(item, &pool_list) {
++		pool = container_of(item, PgPool, head);
++
++		if (!pool->db->topology_query || pool->db->admin)
++			continue;
++
++		if (pool->db->blue_green_deployment_db_type != BLUE_GREEN_SOURCE)
++			continue;
++
++		/* Found BLUE_GREEN_SOURCE pool, now get an available server */
++		server = first_socket(&pool->idle_server_list);
++		if (!server)
++			server = first_socket(&pool->used_server_list);
++
++		if (!server || !server->ready) {
++			log_debug("topology_check: no available server in pool");
++			continue;
++		}
++
++		if (server->pool->db->is_topology_check_in_progress)
++			continue;
++
++		server->pool->db->is_topology_check_in_progress = true;
++		/* Send topology query */
++		slog_debug(server, "topology_check: executing: %s", pool->db->topology_query);
++		SEND_generic(res, server, PqMsg_Query, "s", pool->db->topology_query);
++		if (!res)
++			disconnect_server(server, false, "topology query failed");
++
++		break;
++	}
++
++	is_running = false;
++}
++
++/**
++ * @brief Set up periodic topology check for Blue-Green deployment.
++ *
++ * This function initializes and schedules a periodic event to check the topology
++ * status during Blue-Green deployment. It only activates when fast switchover
++ * is enabled.
++ *
++ * The function performs the following steps:
++ * 1. Checks if fast switchover is enabled; if not, it returns immediately.
++ * 2. Sets the monitoring interval based on the configured value.
++ * 3. Creates a persistent event for periodic topology checks.
++ * 4. Schedules the event to run at the specified interval.
++ *
++ * @note The actual topology check is performed by the do_topology_check function,
++ *       which is set as the callback for the event.
++ *
++ * @see fast_switchover
++ * @see cf_topology_monitoring_interval
++ * @see do_topology_check
++ */
++
++static void topology_check_setup(void)
++{
++	// Initialize interval from runtime-configured value
++	blue_green_topology_monitoring_interval.tv_sec = cf_topology_monitoring_interval/USEC;
++	blue_green_topology_monitoring_interval.tv_usec = 0;
++
++	event_del(&blue_green_topology_check_ev);
++    /* Set up periodic event */
++    event_assign(&blue_green_topology_check_ev, pgb_event_base, -1, EV_PERSIST, do_topology_check, NULL);
++    if (event_add(&blue_green_topology_check_ev, &blue_green_topology_monitoring_interval) < 0)
++		log_warning("event_add failed for blue green topology check, errno : %s", strerror(errno));
++}
++
 +/*
 + * Used to pre-create connection pools at pgbouncer init time.
 + */
@@ -312,6 +434,10 @@ index 5131ea5..c39e84c 100644
 +		PgPool *pool = get_pool(fast_switchover_db, fast_switchover_db->forced_user_credentials);
 +		if (!pool)
 +			fatal("pool could not be created for %s", fast_switchover_db->name);
++		pool->num_nodes = 0;
++
++		if (fast_switchover_db->recovery_query)
++			topology_check_setup();
 +	} else {
 +		fatal("Failed to create a connection pool for database: %s. Username is missing. To enable fast switchover, "
 +			   "please provide a user for this database in config.", fast_switchover_db->name);
@@ -331,7 +457,7 @@ index 5131ea5..c39e84c 100644
  /* maintaining clients in pool */
  static void pool_client_maint(PgPool *pool)
  {
-@@ -494,6 +723,7 @@ static void check_unused_servers(PgPool *pool, struct StatList *slist, bool idle
+@@ -494,6 +846,7 @@ static void check_unused_servers(PgPool *pool, struct StatList *slist, bool idle
  		} else if (server->state == SV_USED && !server->ready) {
  			disconnect_server(server, true, "SV_USED server got dirty");
  		} else if (cf_server_idle_timeout > 0 && idle > cf_server_idle_timeout
@@ -339,7 +465,7 @@ index 5131ea5..c39e84c 100644
  			   && (pool_min_pool_size(pool) == 0 || pool_connected_server_count(pool) > pool_min_pool_size(pool))) {
  			disconnect_server(server, true, "server idle timeout");
  		} else if (age >= server_lifetime) {
-@@ -877,6 +1107,8 @@ void kill_database(PgDatabase *db)
+@@ -877,6 +1230,8 @@ void kill_database(PgDatabase *db)
  	if (db->forced_user_credentials)
  		slab_free(credentials_cache, db->forced_user_credentials);
  	free(db->connect_query);

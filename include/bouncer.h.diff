@@ -1,5 +1,5 @@
 diff --git a/include/bouncer.h b/include/bouncer.h
-index d607ddc..e47c2aa 100644
+index d607ddc..974dd8a 100644
 --- a/include/bouncer.h
 +++ b/include/bouncer.h
 @@ -144,6 +144,22 @@ enum LoadBalanceHosts {
@@ -101,16 +101,17 @@ index d607ddc..e47c2aa 100644
  	enum LoadBalanceHosts load_balance_hosts;	/* strategy for host selection in a comma-separated host list */
  
  	struct PktBuf *startup_params;	/* partial StartupMessage (without user) be sent to server */
-@@ -583,6 +637,8 @@ struct PgDatabase {
+@@ -583,6 +637,9 @@ struct PgDatabase {
  	bool db_disabled;	/* is the database accepting new connections? */
  	bool admin;		/* internal console db */
  	bool fake;		/* not a real database, only for mock auth */
 +
 +	enum BlueGreenDeploymentDBType blue_green_deployment_db_type;	/* indicates the current database context in a Blue-Green deployment (e.g., DEFAULT, SOURCE, or TARGET) */
++	bool is_topology_check_in_progress; /* enables topology monitoring when fast switchover is active; used to track metadata state during Blue-Green deployment. */
  	usec_t inactive_time;	/* when auto-database became inactive (to kill it after timeout) */
  	unsigned active_stamp;	/* set if autodb has connections */
  	int connection_count;	/* total connections for this database in all pools */
-@@ -767,7 +823,9 @@ extern int cf_peer_id;
+@@ -767,7 +824,9 @@ extern int cf_peer_id;
  extern int cf_pool_mode;
  extern int cf_max_client_conn;
  extern int cf_default_pool_size;
@@ -120,15 +121,16 @@ index d607ddc..e47c2aa 100644
  extern int cf_res_pool_size;
  extern usec_t cf_res_pool_timeout;
  extern int cf_max_db_connections;
-@@ -786,6 +844,7 @@ extern int cf_server_reset_query_always;
+@@ -786,6 +845,8 @@ extern int cf_server_reset_query_always;
  extern char *cf_server_check_query;
  extern usec_t cf_server_check_delay;
  extern int cf_server_fast_close;
 +extern usec_t cf_server_failed_delay;
++extern usec_t cf_topology_monitoring_interval;
  extern usec_t cf_server_connect_timeout;
  extern usec_t cf_server_login_retry;
  extern usec_t cf_query_timeout;
-@@ -840,6 +899,11 @@ extern int cf_log_disconnections;
+@@ -840,6 +901,11 @@ extern int cf_log_disconnections;
  extern int cf_log_pooler_errors;
  extern int cf_application_name_add_host;
  

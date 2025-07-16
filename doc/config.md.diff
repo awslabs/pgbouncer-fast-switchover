@@ -1,8 +1,8 @@
 diff --git a/doc/config.md b/doc/config.md
-index b181730..4872044 100644
+index 70c720f..eb0b279 100644
 --- a/doc/config.md
 +++ b/doc/config.md
-@@ -131,6 +131,28 @@ the per-database configuration.
+@@ -131,6 +131,35 @@ the per-database configuration.
  
  Default: 20
  
@@ -20,6 +20,13 @@ index b181730..4872044 100644
 +
 +Default: 30
 +
++### topology_monitoring_interval
++
++How often (in seconds) the system runs a topology check to monitor metadata status during a
++Blue-Green deployment, when fast switchover is enabled.
++
++Default: 60
++
 +### recreate_disconnected_pools
 +
 +If enabled, and [topology_query](#topology_query) is set for a pool, connections to the pools
@@ -31,7 +38,7 @@ index b181730..4872044 100644
  ### min_pool_size
  
  Add more server connections to pool if below this number.
-@@ -1055,6 +1077,13 @@ Query to be executed after a connection is established, but before
+@@ -1257,6 +1286,13 @@ Query to be executed after a connection is established, but before
  allowing the connection to be used by any clients. If the query raises errors,
  they are logged but ignored otherwise.
  

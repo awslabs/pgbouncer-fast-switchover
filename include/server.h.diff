@@ -1,5 +1,5 @@
 diff --git a/include/server.h b/include/server.h
-index e500b11..43c49ce 100644
+index e500b11..b415184 100644
 --- a/include/server.h
 +++ b/include/server.h
 @@ -16,6 +16,13 @@
@@ -21,7 +21,7 @@ index e500b11..43c49ce 100644
  int user_max_connections(PgGlobalUser *user) _MUSTCHECK;
  int user_client_max_connections(PgGlobalUser *user) _MUSTCHECK;
 +/* Set up a new connection pool based on topology data. */
-+PgPool* setup_new_pool(PgSocket *server, TopologyData *topology);
++PgPool* setup_new_pool(PgSocket *server, TopologyData *topology, bool is_replacement_pool);
 +/* Parse and validate topology data from a query result. */
 +const char* parse_topology_data(PgSocket *server, char *data, TopologyData **topology_out);
 +void cleanup_parsing_data_and_exit(TopologyData *topology, char *data_copy, char *port_str);
